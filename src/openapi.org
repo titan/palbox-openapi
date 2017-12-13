@@ -50,7 +50,7 @@
       lock = parseInt(@"lockid")
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 ** 锁状态
