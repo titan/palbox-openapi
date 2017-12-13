@@ -15,6 +15,7 @@
       halt()
 
     <<lock-off>>
+    <<lock-status>>
     <<inside-light-on>>
     <<inside-light-off>>
     <<outside-light-on>>
@@ -53,6 +54,27 @@
     resp Http200, "Okay"
 #+end_src
 ** 锁状态
+#+begin_src nim :noweb-ref lock-status
+  put "/@boxid/locks/@boardid/@lockid":
+    var
+      board = parseInt(@"boardid")
+      lock = parseInt(@"lockid")
+      pin = generate_lock_pin(board, lock)
+      json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+    var
+      countdown = 3
+      get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
+    while get_result == redisNil and countdown > 0:
+      asyncCheck sleepAsync(1000)
+      get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
+    if get_result == redisNil:
+      resp Http404, ""
+    elif get_result == "1":
+      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "status": "closed"}, "application/json"
+    else:
+      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "status": "opened"}, "application/json"
+#+end_src
 
 * 内部照明管理
 ** 开灯
@@ -62,7 +84,7 @@
 #+begin_src nim :noweb-ref inside-light-on
   put "/@boxid/inside-light/on":
     var json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 ** 关灯
@@ -72,7 +94,7 @@
 #+begin_src nim :noweb-ref inside-light-off
   put "/@boxid/inside-light/off":
     var json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 
@@ -84,7 +106,7 @@
 #+begin_src nim :noweb-ref outside-light-on
   put "/@boxid/outside-light/on":
     var json = %*{"command": "outside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 
@@ -95,7 +117,7 @@
 #+begin_src nim :noweb-ref outside-light-off
   put "/@boxid/outside-light/off":
     var json = %*{"command": "outside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 
@@ -107,7 +129,7 @@
 #+begin_src nim :noweb-ref ultraviolet-on
   put "/@boxid/ultraviolet/on":
     var json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 
@@ -118,7 +140,7 @@
 #+begin_src nim :noweb-ref ultraviolet-off
   put "/@boxid/ultraviolet/off":
     var json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60}
-    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     resp Http200, "Okay"
 #+end_src
 
