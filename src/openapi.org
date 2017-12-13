@@ -54,23 +54,29 @@
     resp Http200, "Okay"
 #+end_src
 ** 锁状态
+
+如果缓存中有锁的状态，则直接返回结果。否则循环三次检查缓存中是否有锁的状态，第一
+次检查前，给智能柜下发查询锁状态的命令。每次循环间隔一秒，如果三次循环后，还没有
+结果，则返回 404 错误。
+
 #+begin_src nim :noweb-ref lock-status
-  put "/@boxid/locks/@boardid/@lockid":
+  get "/@boxid/locks/@boardid/@lockid":
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
     var
       countdown = 3
       get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
     while get_result == redisNil and countdown > 0:
+      if countdown == 3:
+        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
       asyncCheck sleepAsync(1000)
       get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
     if get_result == redisNil:
       resp Http404, ""
-    elif get_result == "1":
+    elif get_result == "0":
       resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "status": "closed"}, "application/json"
     else:
       resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "status": "opened"}, "application/json"
