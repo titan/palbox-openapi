@@ -1,0 +1,133 @@
+
+* 程序框架
+#+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim
+  import jester, asyncdispatch, json, random, redis, times
+  import parseutils, strutils
+
+  settings:
+    port = 5080.Port
+
+  let redis_client = redis.open()
+  <<generate-lock-pin>>
+
+  routes:
+    get "/":
+      halt()
+
+    <<lock-off>>
+    <<inside-light-on>>
+    <<inside-light-off>>
+    <<outside-light-on>>
+    <<outside-light-off>>
+    <<ultraviolet-on>>
+    <<ultraviolet-off>>
+
+  runforever()
+#+end_src
+
+* 用户管理
+** 用户列表
+** 增加用户
+** 删除用户
+** 修改用户
+* 分组管理
+** 分组列表
+** 增加分组
+** 修改分组
+** 删除分组
+* 权限管理
+** 权限列表
+** 增加权限
+** 删除权限
+** 修改权限
+* 电控锁管理
+** 开锁
+#+begin_src nim :noweb-ref lock-off
+  put "/@boxid/locks/@boardid/@lockid":
+    var
+      board = parseInt(@"boardid")
+      lock = parseInt(@"lockid")
+      pin = generate_lock_pin(board, lock)
+      json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+** 锁状态
+
+* 内部照明管理
+** 开灯
+
+开灯命令的有效性可以达到 3 个小时
+
+#+begin_src nim :noweb-ref inside-light-on
+  put "/@boxid/inside-light/on":
+    var json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+** 关灯
+
+关灯命令的有效性可以达到 3 个小时
+
+#+begin_src nim :noweb-ref inside-light-off
+  put "/@boxid/inside-light/off":
+    var json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+
+* 外部照明管理
+** 开灯
+
+开灯命令的有效性可以达到 3 个小时
+
+#+begin_src nim :noweb-ref outside-light-on
+  put "/@boxid/outside-light/on":
+    var json = %*{"command": "outside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+
+** 关灯
+
+关灯命令的有效性可以达到 3 个小时
+
+#+begin_src nim :noweb-ref outside-light-off
+  put "/@boxid/outside-light/off":
+    var json = %*{"command": "outside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+
+* 紫外线管理
+** 开灯
+
+开灯命令的有效性可以达到 30 分钟
+
+#+begin_src nim :noweb-ref ultraviolet-on
+  put "/@boxid/ultraviolet/on":
+    var json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+
+** 关灯
+
+关灯命令的有效性可以达到 30 分钟
+
+#+begin_src nim :noweb-ref ultraviolet-off
+  put "/@boxid/ultraviolet/off":
+    var json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60}
+    discard redis_client.lPush(key = "tasks-" & @"boxid", value = $json)
+    resp Http200, "Okay"
+#+end_src
+
+
+* 充电管理
+* 辅助函数
+** 生成 PIN 值
+   PIN 为当前时间戳与 256 取模的结果，用于保证设备对同一个命令只执行一次。
+#+begin_src nim :noweb-ref generate-lock-pin
+  proc generate_lock_pin(board: int, lock: int): int =
+    result = cast[int](cast[int64]((epochTime() / 10).toInt()) mod 256) or (board shl 13) or (lock shl 8)
+#+end_src
