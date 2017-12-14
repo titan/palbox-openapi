@@ -53,7 +53,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock)
+      pin = generate_lock_pin(board, lock, 1)
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
       dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
@@ -72,7 +72,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock)
+      pin = generate_lock_pin(board, lock, 2)
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
@@ -97,7 +97,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock)
+      pin = generate_lock_pin(board, lock, 3)
       json = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
@@ -111,9 +111,9 @@
     if get_result == redisNil:
       resp Http404, ""
     elif get_result == "0":
-      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "detection": "empty"}, "application/json"
-    else:
       resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "detection": "full"}, "application/json"
+    else:
+      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "detection": "empty"}, "application/json"
 #+end_src
 * 内部照明管理
 ** 开灯
@@ -187,10 +187,10 @@
 * 充电管理
 * 辅助函数
 ** 生成 PIN 值
-   PIN 为当前时间戳与 256 取模的结果，用于保证设备对同一个命令只执行一次。
+   PIN 为当前时间戳与 64 取模，外加板号，锁号，命令编号的结果，用于保证锁控板对同一个命令只执行一次。
 #+begin_src nim :noweb-ref generate-lock-pin
-  proc generate_lock_pin(board: int, lock: int): int =
-    result = cast[int](cast[int64]((epochTime() / 10).toInt()) mod 256) or (board shl 13) or (lock shl 8)
+  proc generate_lock_pin(board: int, lock: int, cmd: int): int =
+    result = cast[int](cast[int64](epochTime().toInt() shr 3) mod 64) or (board shl 13) or (lock shl 8) or (cmd shl 6)
 #+end_src
 ** fib
 
