@@ -43,6 +43,9 @@
 ** 修改权限
 * 电控锁管理
 ** 开锁
+
+发送开锁指令后，同时也清空缓存里的锁状态。
+
 #+begin_src nim :noweb-ref lock-off
   put "/@boxid/locks/@boardid/@lockid":
     var
@@ -50,7 +53,9 @@
       lock = parseInt(@"lockid")
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
+      skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
     discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+    discard redis_client.del(@[skey])
     resp Http200, "Okay"
 #+end_src
 ** 锁状态
