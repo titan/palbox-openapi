@@ -9,6 +9,7 @@
 
   let redis_client = redis.open()
   <<generate-lock-pin>>
+  <<fib>>
 
   routes:
     get "/":
@@ -55,8 +56,9 @@
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
+      dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
     discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    discard redis_client.del(@[skey])
+    discard redis_client.del(@[skey, dkey])
     resp Http200, "Okay"
 #+end_src
 ** 锁状态
@@ -73,12 +75,12 @@
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
-      countdown = 3
+      countdown = 7
       get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
     while get_result == redisNil and countdown > 0:
-      if countdown == 3:
+      if countdown == 7:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-      asyncCheck sleepAsync(1000)
+      await sleepAsync(fib(8 - countdown) shl 10)
       get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
       countdown -= 1
     if get_result == redisNil:
@@ -98,12 +100,12 @@
       pin = generate_lock_pin(board, lock)
       json = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
-      countdown = 3
+      countdown = 7
       get_result = redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock)
     while get_result == redisNil and countdown > 0:
-      if countdown == 3:
+      if countdown == 7:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-      asyncCheck sleepAsync(1000)
+      await sleepAsync(fib(8 - countdown) shl 10)
       get_result = redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock)
       countdown -= 1
     if get_result == redisNil:
@@ -189,4 +191,15 @@
 #+begin_src nim :noweb-ref generate-lock-pin
   proc generate_lock_pin(board: int, lock: int): int =
     result = cast[int](cast[int64]((epochTime() / 10).toInt()) mod 256) or (board shl 13) or (lock shl 8)
+#+end_src
+** fib
+
+查表法计算有限的 fib
+
+#+begin_src nim :noweb-ref fib
+
+  const fibs = @[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986, 102334155, 165580141, 267914296, 433494437, 701408733, 1134903170, 1836311903];
+
+  proc fib(n: int): int =
+    return fibs[n]
 #+end_src
