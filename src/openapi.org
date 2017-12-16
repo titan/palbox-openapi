@@ -7,8 +7,9 @@
   settings:
     port = 5080.Port
 
-  let redis_client = redis.open()
+  var redis_client = redis.open()
   <<generate-lock-pin>>
+  <<generate-pin>>
   <<fib>>
 
   routes:
@@ -24,6 +25,8 @@
     <<outside-light-off>>
     <<ultraviolet-on>>
     <<ultraviolet-off>>
+    <<camera-on>>
+    <<camera-off>>
 
   runforever()
 #+end_src
@@ -57,9 +60,17 @@
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
       dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    discard redis_client.del(@[skey, dkey])
-    resp Http200, "Okay"
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      discard redis_client.del(@[skey, dkey])
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 ** 锁状态
 
@@ -76,12 +87,15 @@
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
-      get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
+      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
     while get_result == redisNil and countdown > 0:
       if countdown == 7:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-      await sleepAsync(fib(8 - countdown) shl 10)
-      get_result = redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock)
+        try:
+          discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        except:
+          redis_client = redis.open()
+        await sleepAsync(fib(8 - countdown) shl 10)
+      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
       resp Http404, ""
@@ -101,12 +115,15 @@
       json = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
-      get_result = redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock)
+      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
     while get_result == redisNil and countdown > 0:
       if countdown == 7:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-      await sleepAsync(fib(8 - countdown) shl 10)
-      get_result = redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock)
+        try:
+          discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        except:
+          redis_client = redis.open()
+        await sleepAsync(fib(8 - countdown) shl 10)
+      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
       resp Http404, ""
@@ -122,9 +139,19 @@
 
 #+begin_src nim :noweb-ref inside-light-on
   put "/@boxid/inside-light/on":
-    var json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(1)
+      json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 ** 关灯
 
@@ -132,9 +159,19 @@
 
 #+begin_src nim :noweb-ref inside-light-off
   put "/@boxid/inside-light/off":
-    var json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(1)
+      json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 
 * 外部照明管理
@@ -144,9 +181,19 @@
 
 #+begin_src nim :noweb-ref outside-light-on
   put "/@boxid/outside-light/on":
-    var json = %*{"command": "outside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(1)
+      json = %*{"command": "outside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 
 ** 关灯
@@ -155,9 +202,19 @@
 
 #+begin_src nim :noweb-ref outside-light-off
   put "/@boxid/outside-light/off":
-    var json = %*{"command": "outside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(1)
+      json = %*{"command": "outside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 
 * 紫外线管理
@@ -167,9 +224,19 @@
 
 #+begin_src nim :noweb-ref ultraviolet-on
   put "/@boxid/ultraviolet/on":
-    var json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(2)
+      json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 
 ** 关灯
@@ -178,20 +245,88 @@
 
 #+begin_src nim :noweb-ref ultraviolet-off
   put "/@boxid/ultraviolet/off":
-    var json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60}
-    discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
-    resp Http200, "Okay"
+    var
+      pin = generate_pin(2)
+      json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
+#+end_src
+
+* 摄像头管理
+** 打开
+
+打开摄像头命令的有效性可以达到 30 分钟
+
+#+begin_src nim :noweb-ref camera-on
+  put "/@boxid/camera/on":
+    var
+      pin = generate_pin(3)
+      json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
+#+end_src
+
+** 关闭
+
+关闭摄像头的有效性可以达到 30 分钟
+
+#+begin_src nim :noweb-ref camera-off
+  put "/@boxid/camera/off":
+    var
+      pin = generate_pin(3)
+      json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, "Okay"
+    else:
+      resp Http500, ""
 #+end_src
 
 
 * 充电管理
 * 辅助函数
 ** 生成 PIN 值
+*** 锁 PIN 值
    PIN 为当前时间戳与 64 取模，外加板号，锁号，命令编号的结果，用于保证锁控板对同一个命令只执行一次。
 #+begin_src nim :noweb-ref generate-lock-pin
   proc generate_lock_pin(board: int, lock: int, cmd: int): int =
     result = cast[int](cast[int64](epochTime().toInt() shr 3) mod 64) or (board shl 13) or (lock shl 8) or (cmd shl 6)
 #+end_src
+*** 其他 PIN 值
+
+   PIN 为当前时间戳除 10 与 8192 取模，外加设备编号的结果，用于保证每10秒内，对同一个设备只执行一次命令。
+| no | dev         |
+|----+-------------|
+|  1 | light       |
+|  2 | ultraviolet |
+|  3 | camera      |
+
+#+begin_src nim :noweb-ref generate-pin
+  proc generate_pin(dev: int): int =
+    result = cast[int](cast[int64](epochTime().toInt() shr 3) mod 8192) or (dev shl 13)
+#+end_src
+
 ** fib
 
 查表法计算有限的 fib
