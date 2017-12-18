@@ -325,7 +325,7 @@
 
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
-    result = cast[int](cast[int64](epochTime().toInt() shr 3) mod 8192) or (dev shl 13)
+    result = cast[int](cast[int64](epochTime().toInt() shr 3) and 8191) or (dev shl 13)
 #+end_src
 
 ** fib
