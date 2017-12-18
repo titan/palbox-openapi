@@ -140,7 +140,7 @@
 #+begin_src nim :noweb-ref inside-light-on
   put "/@boxid/inside-light/on":
     var
-      pin = generate_pin(1)
+      pin = generate_pin(0)
       json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
@@ -160,7 +160,7 @@
 #+begin_src nim :noweb-ref inside-light-off
   put "/@boxid/inside-light/off":
     var
-      pin = generate_pin(1)
+      pin = generate_pin(0)
       json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
@@ -316,11 +316,12 @@
 *** 其他 PIN 值
 
    PIN 为当前时间戳除 10 与 8192 取模，外加设备编号的结果，用于保证每10秒内，对同一个设备只执行一次命令。
-| no | dev         |
-|----+-------------|
-|  1 | light       |
-|  2 | ultraviolet |
-|  3 | camera      |
+| no | dev           |
+|----+---------------|
+|  0 | inside-light  |
+|  1 | outside-light |
+|  2 | ultraviolet   |
+|  3 | camera        |
 
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
