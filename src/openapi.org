@@ -28,6 +28,7 @@
     <<ultraviolet-off>>
     <<camera-on>>
     <<camera-off>>
+    <<charger-status>>
 
   runforever()
 #+end_src
@@ -95,7 +96,7 @@
           discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
         except:
           redis_client = redis.open()
-        await sleepAsync(fib(8 - countdown) shl 10)
+      await sleepAsync(fib(8 - countdown) shl 10)
       get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
@@ -123,7 +124,7 @@
           discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
         except:
           redis_client = redis.open()
-        await sleepAsync(fib(8 - countdown) shl 10)
+      await sleepAsync(fib(8 - countdown) shl 10)
       get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
@@ -161,7 +162,6 @@
         status_get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
         detect_get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       while (status_get_result == redisNil or detect_get_result == redisNil) and countdown > 0:
-        echo "countdown ", countdown
         await sleepAsync(fib(8 - countdown) shl 10)
         if status_get_result == redisNil:
           status_get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
@@ -353,6 +353,31 @@
 
 
 * 充电管理
+** 查询
+#+begin_src nim :noweb-ref charger-status
+  get "/@boxid/chargers/@chargerid":
+    var
+      charger = parseInt(@"chargerid")
+      json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30}
+      countdown = 7
+      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil finally: redis_client = redis.open()
+    while get_result == redisNil and countdown > 0:
+      echo "countdown ", countdown
+      if countdown == 7:
+        try:
+          discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        except:
+          redis_client = redis.open()
+      await sleepAsync(fib(8 - countdown) shl 10)
+      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil finally: redis_client = redis.open()
+      countdown -= 1
+    if get_result == redisNil:
+      resp Http404, ""
+    elif parseInt(get_result) > 100:
+      resp Http200, $ %*{"boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
+    else:
+      resp Http200, $ %*{"boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
+#+end_src
 * 辅助函数
 ** 生成 PIN 值
 *** 锁 PIN 值
