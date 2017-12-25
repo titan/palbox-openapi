@@ -80,7 +80,7 @@
   post "/@boxid/locks/@boardid":
     var
       board = parseInt(@"boardid")
-      locks = request.params["lock"].split(',').mapIt(parseInt(it))
+      locks = request.params["locks"].split(',').mapIt(parseInt(it))
       pins = locks.mapIt(generate_lock_pin(board, it, 1))
       json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins}
       okay = false
