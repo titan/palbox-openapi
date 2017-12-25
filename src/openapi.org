@@ -135,7 +135,7 @@
 
 ** 测物状态
 #+begin_src nim :noweb-ref detect
-  get "/@boxid/detections/@boardid/@lockid":
+  get "/@boxid/detect/@boardid/@lockid":
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
@@ -162,7 +162,7 @@
 #+end_src
 ** 测物加锁状态
 #+begin_src nim :noweb-ref lock-status-detect
-  put "/@boxid/lock-detections/@boardid/@lockid":
+  get "/@boxid/lock-status-detect/@boardid/@lockid":
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
