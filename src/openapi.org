@@ -154,11 +154,11 @@
       get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
-      resp Http404, ""
+      resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
     elif get_result == "0":
-      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "empty": false}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": false}, "application/json"
     else:
-      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "empty": true}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": true}, "application/json"
 #+end_src
 ** 测物加锁状态
 #+begin_src nim :noweb-ref lock-status-detect
