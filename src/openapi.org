@@ -395,11 +395,11 @@
       get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
-      resp Http404, ""
+      resp Http200, $ %*{"code": 404, "msg": "无法查询到充电器。", "cmd": "charger-status", "boxid": @"boxid", "charger": charger}, "application/json"
     elif parseInt(get_result) > 100:
-      resp Http200, $ %*{"boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
     else:
-      resp Http200, $ %*{"boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
 #+end_src
 * 辅助函数
 ** 生成 PIN 值
