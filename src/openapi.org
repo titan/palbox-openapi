@@ -2,7 +2,7 @@
 * 程序框架
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim
   import jester, asyncdispatch, json, random, redis, times
-  import parseutils, strutils
+  import parseutils, strutils, sequtils
 
   settings:
     port = 5080.Port
@@ -17,6 +17,7 @@
       halt()
 
     <<lock-off>>
+    <<locks-off>>
     <<lock-status>>
     <<detect>>
     <<lock-detect>>
@@ -70,9 +71,34 @@
     except:
       redis_client = redis.open()
     if okay:
-      resp Http200, "Okay"
+      resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "board": board, "lock": lock}, "application/json"
     else:
-      resp Http500, ""
+      resp Http200, $ %*{"code": 500, "msg": "Cannot connect to cache server", "cmd": "lock-off", "board": board, "lock": lock}, "application/json"
+#+end_src
+** 开多把锁
+#+begin_src nim :noweb-ref locks-off
+  post "/@boxid/locks/@boardid":
+    var
+      board = parseInt(@"boardid")
+      locks = request.params["lock"].split(',').mapIt(parseInt(it))
+      pins = locks.mapIt(generate_lock_pin(board, it, 1))
+      json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins}
+      okay = false
+    try:
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+      for i in 0..len(locks) - 1:
+        var
+          lock = locks[i]
+          skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
+          dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
+        discard redis_client.del(@[skey, dkey])
+      okay = true
+    except:
+      redis_client = redis.open()
+    if okay:
+      resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "board": board, "locks": locks}, "application/json"
+    else:
+      resp Http200, $ %*{"code": 500, "msg": "Cannot connect to cache server", "cmd": "locks-off", "board": board, "locks": locks}, "application/json"
 #+end_src
 ** 锁状态
 
