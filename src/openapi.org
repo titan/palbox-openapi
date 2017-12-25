@@ -126,11 +126,11 @@
       get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
       countdown -= 1
     if get_result == redisNil:
-      resp Http404, ""
+      resp Http200, $ %*{"code": 404, "msg": "无法获取到锁状态。", "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
     elif get_result == "0":
-      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "opened": false}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": false, "closed": true}, "application/json"
     else:
-      resp Http200, $ %*{"boxid": @"boxid", "board": board, "lock": lock, "opened": true}, "application/json"
+      resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
 #+end_src
 
 ** 测物状态
@@ -197,9 +197,9 @@
         elif status_get_result == redisNil:
           resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}, "application/json"
         else:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "opened": if status_get_result == "0": false else: true}, "application/json"
+          resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
       else:
-        resp Http200, $ %*{"code": 1, "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "opened": if status_get_result == "0": false else: true}, "application/json"
+        resp Http200, $ %*{"code": 1, "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
     else:
       resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
 #+end_src
