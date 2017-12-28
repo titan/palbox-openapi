@@ -21,10 +21,10 @@
     <<lock-status>>
     <<detect>>
     <<lock-status-detect>>
-    <<inside-light-on>>
-    <<inside-light-off>>
-    <<outside-light-on>>
-    <<outside-light-off>>
+    <<light-on>>
+    <<light-off>>
+    <<fan-on>>
+    <<fan-off>>
     <<ultraviolet-on>>
     <<ultraviolet-off>>
     <<camera-on>>
@@ -203,16 +203,16 @@
     else:
       resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
 #+end_src
-* 内部照明管理
+* 照明管理
 ** 开灯
 
 开灯命令的有效性可以达到 3 个小时
 
-#+begin_src nim :noweb-ref inside-light-on
-  put "/@boxid/inside-light/on":
+#+begin_src nim :noweb-ref light-on
+  put "/@boxid/light/on":
     var
       pin = generate_pin(0)
-      json = %*{"command": "inside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -228,11 +228,11 @@
 
 关灯命令的有效性可以达到 3 个小时
 
-#+begin_src nim :noweb-ref inside-light-off
-  put "/@boxid/inside-light/off":
+#+begin_src nim :noweb-ref light-off
+  put "/@boxid/light/off":
     var
       pin = generate_pin(0)
-      json = %*{"command": "inside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -245,16 +245,16 @@
       resp Http500, ""
 #+end_src
 
-* 外部照明管理
-** 开灯
+* 风扇管理
+** 开启
 
-开灯命令的有效性可以达到 3 个小时
+开启风扇命令的有效性可以达到 3 个小时
 
-#+begin_src nim :noweb-ref outside-light-on
-  put "/@boxid/outside-light/on":
+#+begin_src nim :noweb-ref fan-on
+  put "/@boxid/fan/on":
     var
       pin = generate_pin(1)
-      json = %*{"command": "outside-light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -267,15 +267,15 @@
       resp Http500, ""
 #+end_src
 
-** 关灯
+** 关闭
 
-关灯命令的有效性可以达到 3 个小时
+关闭风扇命令的有效性可以达到 3 个小时
 
-#+begin_src nim :noweb-ref outside-light-off
-  put "/@boxid/outside-light/off":
+#+begin_src nim :noweb-ref fan-off
+  put "/@boxid/fan/off":
     var
       pin = generate_pin(1)
-      json = %*{"command": "outside-light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+      json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
