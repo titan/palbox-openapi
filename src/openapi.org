@@ -59,7 +59,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock, 1)
+      pin = generate_lock_pin(board, lock, 0)
       json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
       dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
@@ -81,7 +81,7 @@
     var
       board = parseInt(@"boardid")
       locks = request.params["locks"].split(',').mapIt(parseInt(it))
-      pins = locks.mapIt(generate_lock_pin(board, it, 1))
+      pins = locks.mapIt(generate_lock_pin(board, it, 0))
       json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins}
       okay = false
     try:
@@ -111,7 +111,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock, 2)
+      pin = generate_lock_pin(board, lock, 1)
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
@@ -139,7 +139,7 @@
     var
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
-      pin = generate_lock_pin(board, lock, 3)
+      pin = generate_lock_pin(board, lock, 2)
       json = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
@@ -167,14 +167,12 @@
       board = parseInt(@"boardid")
       lock = parseInt(@"lockid")
       expires_at = epochTime().toInt() + 30
-      json2 = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 2)}
-      json3 = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
+      json = %*{"command": "lock-status-detect", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
       dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
       okay = false
     try:
-      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json2)
-      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json3)
+      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
       okay = true
     except:
       redis_client = redis.open()
