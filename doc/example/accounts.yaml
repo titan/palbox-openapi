@@ -1,4 +1,0 @@
-total: 1
-offset: 0
-data:
-  - !include account.yaml
