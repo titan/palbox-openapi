@@ -115,15 +115,17 @@
       json = %*{"command": "lock-status", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
-      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
+      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
     while get_result == redisNil and countdown > 0:
       if countdown == 7:
         try:
           discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
         except:
           redis_client = redis.open()
-      await sleepAsync(fib(8 - countdown) shl 10)
-      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
+        await sleepAsync(3000)
+      else:
+        await sleepAsync(fib(7 - countdown) shl 10)
+      get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       countdown -= 1
     if get_result == redisNil:
       resp Http200, $ %*{"code": 404, "msg": "无法获取到锁状态。", "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
@@ -143,15 +145,17 @@
       json = %*{"command": "lock-detect", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
     var
       countdown = 7
-      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
+      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
     while get_result == redisNil and countdown > 0:
       if countdown == 7:
         try:
           discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
         except:
           redis_client = redis.open()
-      await sleepAsync(fib(8 - countdown) shl 10)
-      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil finally: redis_client = redis.open()
+        await sleepAsync(3000)
+      else:
+        await sleepAsync(fib(7 - countdown) shl 10)
+      get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       countdown -= 1
     if get_result == redisNil:
       resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
@@ -180,14 +184,14 @@
     if okay:
       var
         countdown = 7
-        status_get_result = try: redis_client.get(skey) except: redisNil finally: redis_client = redis.open()
-        detect_get_result = try: redis_client.get(dkey) except: redisNil finally: redis_client = redis.open()
+        status_get_result = try: redis_client.get(skey) except: redisNil
+        detect_get_result = try: redis_client.get(dkey) except: redisNil
       while (status_get_result == redisNil or detect_get_result == redisNil) and countdown > 0:
         await sleepAsync(fib(8 - countdown) shl 10)
         if status_get_result == redisNil:
-          status_get_result = try: redis_client.get(skey) except: redisNil finally: redis_client = redis.open()
+          status_get_result = try: redis_client.get(skey) except: redisNil
         if detect_get_result == redisNil:
-          detect_get_result = try: redis_client.get(dkey) except: redisNil finally: redis_client = redis.open()
+          detect_get_result = try: redis_client.get(dkey) except: redisNil
         countdown -= 1
       if status_get_result == redisNil or detect_get_result == redisNil:
         if status_get_result == redisNil and detect_get_result == redisNil:
@@ -381,7 +385,7 @@
       charger = parseInt(@"chargerid")
       json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30}
       countdown = 7
-      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil finally: redis_client = redis.open()
+      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
     while get_result == redisNil and countdown > 0:
       echo "countdown ", countdown
       if countdown == 7:
@@ -389,8 +393,10 @@
           discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
         except:
           redis_client = redis.open()
-      await sleepAsync(fib(8 - countdown) shl 10)
-      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil finally: redis_client = redis.open()
+        await sleepAsync(3)
+      else:
+        await sleepAsync(fib(7 - countdown) shl 10)
+      get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
       countdown -= 1
     if get_result == redisNil:
       resp Http200, $ %*{"code": 404, "msg": "无法查询到充电器。", "cmd": "charger-status", "boxid": @"boxid", "charger": charger}, "application/json"
@@ -410,12 +416,12 @@
 *** 其他 PIN 值
 
    PIN 为当前时间戳除 10 与 8192 取模，外加设备编号的结果，用于保证每10秒内，对同一个设备只执行一次命令。
-| no | dev           |
-|----+---------------|
-|  0 | inside-light  |
-|  1 | outside-light |
-|  2 | ultraviolet   |
-|  3 | camera        |
+| no | dev         |
+|----+-------------|
+|  0 | light       |
+|  1 | fan         |
+|  2 | ultraviolet |
+|  3 | camera      |
 
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
