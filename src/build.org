@@ -18,7 +18,7 @@
   # Dependencies
 
   requires "nim >= 0.17.0"
-  requires "jester >= 0.2.0", "redis >= 0.2.0"
+  requires "jester >= 0.2.0", "redis >= 0.2.0", "hmac >= 0.1.5", "strfmt >= 0.8.5"
 #+end_src
 
 * 发行脚本
