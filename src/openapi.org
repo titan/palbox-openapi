@@ -2,7 +2,11 @@
 * 程序框架
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim
   import jester, asyncdispatch, json, random, redis, times
-  import parseutils, strutils, sequtils
+  import parseutils, strutils, sequtils, logging
+
+  var L = newConsoleLogger(fmtStr = "$levelid [$datetime] : ")
+  addHandler(L)
+  setLogFilter(when defined(release): lvlInfo else: lvlDebug)
 
   settings:
     port = 5080.Port
@@ -216,13 +220,13 @@
       lock = parseInt(@"lockid")
       expires_at = epochTime().toInt() + 30
       json1 = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0)}
-      json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
+      #json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
       skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
       dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json1)
-      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json2)
+      #discard redis_client.lPush(key = "tasks." & @"boxid", value = $json2)
       discard redis_client.del(@[skey, dkey])
       okay = true
     except:
@@ -262,11 +266,11 @@
       locks = request.params["locks"].split(',').mapIt(parseInt(it))
       expires_at = epochTime().toInt() + 30
       json1 = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": expires_at, "pins": locks.mapIt(generate_lock_pin(board, it, 0))}
-      json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, locks[0], 3)}
+      #json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, locks[0], 3)}
       okay = false
     try:
       discard redis_client.lPush(key = "tasks." & @"boxid", value = $json1)
-      discard redis_client.lPush(key = "tasks." & @"boxid", value = $json2)
+      #discard redis_client.lPush(key = "tasks." & @"boxid", value = $json2)
       for i in 0..len(locks) - 1:
         var
           lock = locks[i]
@@ -476,7 +480,6 @@
       resp Http500, ""
 #+end_src
 
-
 * 充电管理
 ** 查询
 #+begin_src nim :noweb-ref charger-status
@@ -486,7 +489,7 @@
       json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30}
       countdown = 7
       get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
-    while get_result == redisNil and countdown > 0:
+    while get_result == redisNil and countdown != 0:
       echo "countdown ", countdown
       if countdown == 7:
         try:
@@ -500,10 +503,22 @@
       countdown -= 1
     if get_result == redisNil:
       resp Http200, $ %*{"code": 404, "msg": "无法查询到充电器。", "cmd": "charger-status", "boxid": @"boxid", "charger": charger}, "application/json"
-    elif parseInt(get_result) > 100:
-      resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
-    else:
+    elif parseInt(get_result) == 0:
       resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
+    else:
+      resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
+#+end_src
+* 在线检测
+#+begin_src nim :noweb-ref online-detect
+  get "/@boxid":
+    let
+      now = getLocalTime(getTime()) - 1.minutes
+      activated_key = "box.activated." & getDateStr() & "." & now.hour.format("02d") & "." & now.minute.format("02d")
+      ismember = redis_client.sismember(activated_key, @"boxid")
+    if ismember != redisNil and ismember != 0:
+      resp Http200, $ %*{"code": 1, "cmd": "online-detect", "boxid": @"boxid", "online": true}, "application/json"
+    else:
+      resp Http200, $ %*{"code": 404, "cmd": "online-detect", "boxid": @"boxid", "offline": true}, "application/json"
 #+end_src
 * 辅助函数
 ** 生成 PIN 值
