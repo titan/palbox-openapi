@@ -85,7 +85,7 @@
     if okay:
       resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
     else:
-      resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+      resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁
 #+begin_src nim :noweb-ref locks-off
@@ -110,7 +110,7 @@
     if okay:
       resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
     else:
-      resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+      resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
 #+end_src
 ** 锁状态
 
@@ -140,7 +140,7 @@
       get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       countdown -= 1
     if get_result == redisNil:
-      resp Http200, $ %*{"code": 404, "msg": "无法获取到锁状态。", "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+      resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到锁状态"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
     elif get_result == "0":
       resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": false, "closed": true}, "application/json"
     else:
@@ -170,7 +170,7 @@
       get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       countdown -= 1
     if get_result == redisNil:
-      resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+      resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
     elif get_result == "0":
       resp Http200, $ %*{"code": 1, "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": false}, "application/json"
     else:
@@ -208,15 +208,15 @@
         countdown -= 1
       if status_get_result == redisNil or detect_get_result == redisNil:
         if status_get_result == redisNil and detect_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态和测物状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
         elif status_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}), "application/json"
         else:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
       else:
         resp Http200, $ %*{"code": 1, "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
     else:
-      resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器。", "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+      resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开锁加测物加锁状态
 #+begin_src nim :noweb-ref lock-off-status-detect
@@ -253,15 +253,15 @@
         countdown -= 1
       if status_get_result == redisNil or detect_get_result == redisNil:
         if status_get_result == redisNil and detect_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态和测物状态。", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
         elif status_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态。", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}), "application/json"
         else:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
       else:
         resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
     else:
-      resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器。", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+      resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁加测物加锁状态
 开多把锁后，仅返回第一把锁的状态和测物条状态。
@@ -305,15 +305,15 @@
         countdown -= 1
       if status_get_result == redisNil or detect_get_result == redisNil:
         if status_get_result == redisNil and detect_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态和测物状态。", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
         elif status_get_result == redisNil:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到锁状态。", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "empty": if detect_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "empty": if detect_get_result == "0": false else: true}), "application/json"
         else:
-          resp Http200, $ %*{"code": 404, "msg": "无法查询到测物状态。", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
       else:
         resp Http200, $ %*{"code": 1, "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
     else:
-      resp Http200, $ %*{"code": 500, "msg": "无法连接到缓存服务器。", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+      resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
 #+end_src
 * 照明管理
 ** 开灯
@@ -508,7 +508,7 @@
       get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
       countdown -= 1
     if get_result == redisNil:
-      resp Http200, $ %*{"code": 404, "msg": "无法查询到充电器。", "cmd": "charger-status", "boxid": @"boxid", "charger": charger}, "application/json"
+      resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到充电器。"), "cmd": "charger-status", "boxid": @"boxid", "charger": charger}), "application/json"
     elif parseInt(get_result) == 0:
       resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
     else:
@@ -575,18 +575,18 @@
             if hmac.to_hex(hmac_sha1(secret_tokens[appid], params)) == signature:
               actions
             else:
-              #resp Http200, $ %*{"code": 403, "msg": "无法通过签名检查"}, "application/json"
+              #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
               actions
           else:
-            #resp Http200, $ %*{"code": 403, "msg": "无法通过签名检查"}, "application/json"
+            #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
             actions
         else:
-          #resp Http200, $ %*{"code": 403, "msg": "无法通过签名检查"}, "application/json"
+          #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
           actions
       else:
-        #resp Http200, $ %*{"code": 403, "msg": "无法通过签名检查"}, "application/json"
+        #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
         actions
     else:
-      #resp Http200, $ %*{"code": 403, "msg": "无法通过签名检查"}, "application/json"
+      #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
       actions
 #+end_src
