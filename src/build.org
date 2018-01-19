@@ -21,6 +21,12 @@
   requires "jester >= 0.2.0", "redis >= 0.2.0", "hmac >= 0.1.5", "strfmt >= 0.8.5"
 #+end_src
 
+
+优化程序
+#+begin_src nimscript :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim.cfg
+-d:release
+#+end_src
+
 * 发行脚本
 #+begin_src text :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/Dockerfile
   FROM hive/nim-base:3.6
