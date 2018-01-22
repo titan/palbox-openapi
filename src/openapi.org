@@ -328,14 +328,14 @@
 * 照明管理
 ** 开灯
 
-开灯命令的有效性可以达到 3 个小时
+开灯命令的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref light-on
   put "/@boxid/light/on":
     check_signature(request, "light-on" & "/"  & @"boxid" & "/light/on"):
       var
         pin = generate_pin(0)
-        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -350,14 +350,14 @@
 #+end_src
 ** 关灯
 
-关灯命令的有效性可以达到 3 个小时
+关灯命令的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref light-off
   put "/@boxid/light/off":
     check_signature(request, "light-off" & "/"  & @"boxid" & "/light/off"):
       var
         pin = generate_pin(0)
-        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -421,14 +421,14 @@
 * 紫外线管理
 ** 开灯
 
-开灯命令的有效性可以达到 30 分钟
+开灯命令的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref ultraviolet-on
   put "/@boxid/ultraviolet/on":
     check_signature(request, "ultraviolet-on" & "/"  & @"boxid" & "/ultraviolet/on"):
       var
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -444,14 +444,14 @@
 
 ** 关灯
 
-关灯命令的有效性可以达到 30 分钟
+关灯命令的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref ultraviolet-off
   put "/@boxid/ultraviolet/off":
     check_signature(request, "ultraviolet-off" & "/"  & @"boxid" & "/ultraviolet/off"):
       var
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -468,14 +468,14 @@
 * 摄像头管理
 ** 打开
 
-打开摄像头命令的有效性可以达到 30 分钟
+打开摄像头命令的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref camera-on
   put "/@boxid/camera/on":
     check_signature(request, "camera-on" & "/"  & @"boxid" & "/camera/on"):
       var
         pin = generate_pin(3)
-        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -491,14 +491,14 @@
 
 ** 关闭
 
-关闭摄像头的有效性可以达到 30 分钟
+关闭摄像头的有效性可以达到 5 分钟
 
 #+begin_src nim :noweb-ref camera-off
   put "/@boxid/camera/off":
     check_signature(request, "camera-off" & "/"  & @"boxid" & "/camera/off"):
       var
         pin = generate_pin(3)
-        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
