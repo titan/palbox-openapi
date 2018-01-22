@@ -73,7 +73,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 0)
-        json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin}
+        json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         okay = false
@@ -96,7 +96,7 @@
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         pins = locks.mapIt(generate_lock_pin(board, it, 0))
-        json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins}
+        json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -127,7 +127,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 1)
-        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin}
+        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
       var
         countdown = 7
         get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
@@ -158,7 +158,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 2)
-        json = %*{"command": "lock-detect", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin}
+        json = %*{"command": "lock-detect", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
       var
         countdown = 7
         get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
@@ -188,7 +188,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         expires_at = epochTime().toInt() + 30
-        json = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
+        json = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         okay = false
@@ -231,7 +231,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         expires_at = epochTime().toInt() + 30
-        json1 = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0)}
+        json1 = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         #json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3)}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
@@ -278,7 +278,7 @@
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         expires_at = epochTime().toInt() + 30
-        json1 = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": expires_at, "pins": locks.mapIt(generate_lock_pin(board, it, 0))}
+        json1 = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": expires_at, "pins": locks.mapIt(generate_lock_pin(board, it, 0)), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         #json2 = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, locks[0], 3)}
         okay = false
       try:
@@ -332,7 +332,7 @@
     check_signature(request, "light-on" & "/"  & @"boxid" & "/light/on"):
       var
         pin = generate_pin(0)
-        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -353,7 +353,7 @@
     check_signature(request, "light-off" & "/"  & @"boxid" & "/light/off"):
       var
         pin = generate_pin(0)
-        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -376,7 +376,7 @@
     check_signature(request, "fan-on" & "/"  & @"boxid" & "/fan/on"):
       var
         pin = generate_pin(1)
-        json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+        json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -398,7 +398,7 @@
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
       var
         pin = generate_pin(1)
-        json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin}
+        json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -421,7 +421,7 @@
     check_signature(request, "ultraviolet-on" & "/"  & @"boxid" & "/ultraviolet/on"):
       var
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -443,7 +443,7 @@
     check_signature(request, "ultraviolet-off" & "/"  & @"boxid" & "/ultraviolet/off"):
       var
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -466,7 +466,7 @@
     check_signature(request, "camera-on" & "/"  & @"boxid" & "/camera/on"):
       var
         pin = generate_pin(3)
-        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -488,7 +488,7 @@
     check_signature(request, "camera-off" & "/"  & @"boxid" & "/camera/off"):
       var
         pin = generate_pin(3)
-        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin}
+        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 30 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
         discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
@@ -508,7 +508,7 @@
     check_signature(request, "charger-status" & "/"  & @"boxid" & "/chargers/" & @"chargerid"):
       var
         charger = parseInt(@"chargerid")
-        json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30}
+        json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         countdown = 7
         get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
       while get_result == redisNil and countdown != 0:
