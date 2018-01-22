@@ -78,7 +78,7 @@
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.del(@[skey, dkey])
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
@@ -100,7 +100,7 @@
         json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         for i in 0..len(locks) - 1:
           var
             lock = locks[i]
@@ -136,7 +136,7 @@
       while get_result == redisNil and countdown != 0:
         if countdown == 7:
           try:
-            discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
           except:
             redis_client = redis.open()
@@ -168,7 +168,7 @@
       while get_result == redisNil and countdown != 0:
         if countdown == 7:
           try:
-            discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
           except:
             redis_client = redis.open()
@@ -197,7 +197,7 @@
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -241,7 +241,7 @@
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         discard redis_client.del(@[skey, dkey])
         okay = true
@@ -285,7 +285,7 @@
         json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": expires_at, "pins": locks.mapIt(generate_lock_pin(board, it, 0)), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         for i in 0..len(locks) - 1:
           var
@@ -338,7 +338,7 @@
         json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -360,7 +360,7 @@
         json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -384,7 +384,7 @@
         json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -407,7 +407,7 @@
         json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -431,7 +431,7 @@
         json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -454,7 +454,7 @@
         json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -478,7 +478,7 @@
         json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -501,7 +501,7 @@
         json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         okay = false
       try:
-        discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         okay = true
       except:
@@ -526,7 +526,7 @@
         echo "countdown ", countdown
         if countdown == 7:
           try:
-            discard redis_client.lPush(key = "tasks." & @"boxid", value = $json)
+            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
           except:
             redis_client = redis.open()
