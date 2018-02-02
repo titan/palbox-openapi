@@ -69,18 +69,22 @@
 #+begin_src nim :noweb-ref lock-off
   put "/@boxid/locks/@boardid/@lockid":
     check_signature(request, "lock-off" & "/"  & @"boxid" & "/locks/" & @"boardid" & "/" & "@lockid"):
-      var
+      let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 0)
         json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.del(@[skey, dkey])
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -93,14 +97,18 @@
 #+begin_src nim :noweb-ref locks-off
   post "/@boxid/locks/@boardid":
     check_signature(request, "locks-off" & "/"  & @"boxid" & "/locks/" & @"boardid" & request.body):
-      var
+      let
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         pins = locks.mapIt(generate_lock_pin(board, it, 0))
         json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
+        redis_client.multi()
         discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
+        discard redis_client.exec()
         for i in 0..len(locks) - 1:
           var
             lock = locks[i]
@@ -125,19 +133,23 @@
 #+begin_src nim :noweb-ref lock-status
   get "/@boxid/locks/@boardid/@lockid":
     check_signature(request, "lock-status" & "/"  & @"boxid" & "/locks/" & @"boardid" & "/" & @"lockid"):
-      var
+      let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 1)
         json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
       var
         countdown = 7
         get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       while get_result == redisNil and countdown != 0:
         if countdown == 7:
           try:
-            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
           except:
             redis_client = redis.open()
           await sleepAsync(3000)
@@ -157,19 +169,23 @@
 #+begin_src nim :noweb-ref detect
   get "/@boxid/detect/@boardid/@lockid":
     check_signature(request, "lock-detect" & "/"  & @"boxid" & "/detect/" & @"boardid" & "/" & @"lockid"):
-      var
+      let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 2)
         json = %*{"command": "lock-detect", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
       var
         countdown = 7
         get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
       while get_result == redisNil and countdown != 0:
         if countdown == 7:
           try:
-            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
           except:
             redis_client = redis.open()
           await sleepAsync(3000)
@@ -188,17 +204,21 @@
 #+begin_src nim :noweb-ref lock-status-detect
   get "/@boxid/lock-status-detect/@boardid/@lockid":
     check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & "/" & @"lockid"):
-      var
+      let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         expires_at = epochTime().toInt() + 30
         json = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key =tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -232,18 +252,22 @@
 #+begin_src nim :noweb-ref lock-off-status-detect
   put "/@boxid/lock-status-detect/@boardid/@lockid":
     check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & "/" & @"lockid"):
-      var
+      let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         expires_at = epochTime().toInt() + 30
         json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
         discard redis_client.del(@[skey, dkey])
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -278,15 +302,19 @@
 #+begin_src nim :noweb-ref locks-off-status-detect
   post "/@boxid/lock-status-detect/@boardid":
     check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & request.body):
-      var
+      let
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         expires_at = epochTime().toInt() + 30
         json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": expires_at, "pins": locks.mapIt(generate_lock_pin(board, it, 0)), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         for i in 0..len(locks) - 1:
           var
             lock = locks[i]
@@ -333,13 +361,17 @@
 #+begin_src nim :noweb-ref light-on
   put "/@boxid/light/on":
     check_signature(request, "light-on" & "/"  & @"boxid" & "/light/on"):
-      var
+      let
         pin = generate_pin(0)
         json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -355,13 +387,17 @@
 #+begin_src nim :noweb-ref light-off
   put "/@boxid/light/off":
     check_signature(request, "light-off" & "/"  & @"boxid" & "/light/off"):
-      var
+      let
         pin = generate_pin(0)
         json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -379,13 +415,17 @@
 #+begin_src nim :noweb-ref fan-on
   put "/@boxid/fan/on":
     check_signature(request, "fan-on" & "/"  & @"boxid" & "/fan/on"):
-      var
+      let
         pin = generate_pin(1)
         json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -402,13 +442,17 @@
 #+begin_src nim :noweb-ref fan-off
   put "/@boxid/fan/off":
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
-      var
+      let
         pin = generate_pin(1)
         json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -426,13 +470,17 @@
 #+begin_src nim :noweb-ref ultraviolet-on
   put "/@boxid/ultraviolet/on":
     check_signature(request, "ultraviolet-on" & "/"  & @"boxid" & "/ultraviolet/on"):
-      var
+      let
         pin = generate_pin(2)
         json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -449,13 +497,17 @@
 #+begin_src nim :noweb-ref ultraviolet-off
   put "/@boxid/ultraviolet/off":
     check_signature(request, "ultraviolet-off" & "/"  & @"boxid" & "/ultraviolet/off"):
-      var
+      let
         pin = generate_pin(2)
         json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -473,13 +525,17 @@
 #+begin_src nim :noweb-ref camera-on
   put "/@boxid/camera/on":
     check_signature(request, "camera-on" & "/"  & @"boxid" & "/camera/on"):
-      var
+      let
         pin = generate_pin(3)
         json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -496,13 +552,17 @@
 #+begin_src nim :noweb-ref camera-off
   put "/@boxid/camera/off":
     check_signature(request, "camera-off" & "/"  & @"boxid" & "/camera/off"):
-      var
+      let
         pin = generate_pin(3)
         json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        okay = false
+        tkey = "tasks." & @"boxid"
+      var okay = false
       try:
-        discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
         okay = true
       except:
         redis_client = redis.open()
@@ -517,17 +577,22 @@
 #+begin_src nim :noweb-ref charger-status
   get "/@boxid/chargers/@chargerid":
     check_signature(request, "charger-status" & "/"  & @"boxid" & "/chargers/" & @"chargerid"):
-      var
+      let
         charger = parseInt(@"chargerid")
         json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
+      var
         countdown = 7
         get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
       while get_result == redisNil and countdown != 0:
         echo "countdown ", countdown
         if countdown == 7:
           try:
-            discard redis_client.rpush(key = "tasks." & @"boxid", value = $json)
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
           except:
             redis_client = redis.open()
           await sleepAsync(3)
