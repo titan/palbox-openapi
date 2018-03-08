@@ -5,6 +5,28 @@ FORMAT: 1A
 正式服务器地址为 http://palbox.fengchaohuzhu.com:5080/
 测试服务器地址为 http://dev.fengchaohuzhu.com:5080/
 
+## 柜子 [/{boxid}]
+
+### 在线状态 [GET]
+
++ Response 200 (application/json)
+
+        {
+          "code": 1,
+          "cmd": "online-detect",
+          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
+          "online": true
+        }
+
++ Response 200 (application/json)
+
+        {
+          "code": 1,
+          "cmd": "online-detect",
+          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
+          "offline": true
+        }
+
 ## 板 [/{boxid}/locks/{boardid}]
 
 ### 开多把锁 [POST]
@@ -339,3 +361,11 @@ chargerid 的取值范围是 1, 2, 3, 4
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "charger": 0,
         }
+
+## 音频 [/{boxid}/speakers/{speaker}/audios/{audio}]
+
+### 播放音频 [PUT]
+
++ Response 200
+
+        Okay

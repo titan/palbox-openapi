@@ -1,4 +1,3 @@
-
 * 程序框架
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim
   import jester, asyncdispatch, json, random, redis, times, cgi
@@ -42,6 +41,7 @@
     <<camera-off>>
     <<charger-status>>
     <<online-detect>>
+    <<play>>
 
   runforever()
 #+end_src
@@ -619,6 +619,33 @@
         resp Http200, $ %*{"code": 1, "cmd": "online-detect", "boxid": @"boxid", "online": true}, "application/json"
       else:
         resp Http200, $ %*{"code": 1, "cmd": "online-detect", "boxid": @"boxid", "offline": true}, "application/json"
+#+end_src
+* 音频管理
+speaker 的编号与 card reader 的编号一致。
+** 播放
+#+begin_src nim :noweb-ref play
+  put "/@boxid/speakers/@speaker/audios/@audio":
+    check_signature(request, "play" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/" & @"audio"):
+      let
+        speaker = parseInt(@"speaker")
+        audio = parseInt(@"audio")
+        pin = generate_lock_pin(speaker, audio, 0)
+        json = %* {"command": "play", "speaker": speaker, "audio": audio, "pin": pin, "expires-at": epochTime().toInt() + 30, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
+      var okay = false
+      try:
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
+        discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
+        okay = true
+      except:
+        redis_client = redis.open()
+      if okay:
+        resp Http200, "Okay"
+      else:
+        resp Http500, ""
 #+end_src
 * 辅助函数
 ** 生成 PIN 值
