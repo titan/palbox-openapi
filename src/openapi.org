@@ -101,7 +101,10 @@
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         pins = locks.mapIt(generate_lock_pin(board, it, 0))
-        json = %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = if len(pins) == 1:
+                 %*{"command": "lock-off", "board": board, "lock": locks[0], "expires-at": epochTime().toInt() + 30, "pin": pins[0], "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+               else:
+                 %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -119,10 +122,16 @@
         okay = true
       except:
         redis_client = redis.open()
-      if okay:
-        resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+      if len(pins) == 1:
+        if okay:
+          resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}, "application/json"
+        else:
+          resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
       else:
-        resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
+        if okay:
+          resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+        else:
+          resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
 #+end_src
 ** 锁状态
 
