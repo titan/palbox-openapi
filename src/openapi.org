@@ -8,6 +8,7 @@
   setLogFilter(when defined(release): lvlInfo else: lvlDebug)
   var secret_tokens = {
     "b87fa2e20853161eaf3742c3592492aa": "c56abdcb2691d4546cb1c5ecf73964aff96e6f2e166e4869a65aef4817250ec6", # business
+    "4b71f4fd1dec2809940abe0c558d6fc6": "d88986f75ee86951e59b49cff68244f90ae0b3e7eafdf19681b6b61f57fc7e91", # cli
   }.newStringTable(modeCaseSensitive)
 
   settings:
@@ -620,22 +621,22 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
               actions
             else:
               #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-              info request.path, " 请求无法通过签名检查"
+              info request.path, " 请求无法通过签名检查 ", hmac.to_hex(hmac_sha1(secret_tokens[appid], params & date)), " ", signature
               actions
           else:
             #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-            info request.path, " 请求无法通过签名检查"
+            info request.path, " 请求无法通过签名检查", " invalid app-key"
             actions
         else:
           #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-          info request.path, " 请求无法通过签名检查"
+          info request.path, " 请求无法通过签名检查", " invalid authorization header"
           actions
       else:
         #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-        info request.path, " 请求无法通过签名检查"
+        info request.path, " 请求无法通过签名检查", " no authorization header"
         actions
     else:
       #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-      info request.path, " 请求无法通过签名检查"
+      info request.path, " 请求无法通过签名检查", " no date header"
       actions
 #+end_src
