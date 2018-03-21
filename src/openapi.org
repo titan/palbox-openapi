@@ -29,8 +29,8 @@
     <<lock-status>>
     <<detect>>
     <<lock-status-detect>>
-    <<lock-off-status-detect>>
-    <<locks-off-status-detect>>
+    <<lock-off-status>>
+    <<locks-off-status>>
     <<light-on>>
     <<light-off>>
     <<fan-on>>
@@ -174,100 +174,16 @@
         resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
 #+end_src
 
-** 测物状态
-#+begin_src nim :noweb-ref detect
-  get "/@boxid/detect/@boardid/@lockid":
-    check_signature(request, "lock-detect" & "/"  & @"boxid" & "/detect/" & @"boardid" & "/" & @"lockid"):
-      let
-        board = parseInt(@"boardid")
-        lock = parseInt(@"lockid")
-        pin = generate_lock_pin(board, lock, 2)
-        json = %*{"command": "lock-detect", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        tkey = "tasks." & @"boxid"
-      var
-        countdown = 7
-        get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
-      while get_result == redisNil and countdown != 0:
-        if countdown == 7:
-          try:
-            redis_client.multi()
-            discard redis_client.rpush(key = tkey, value = $json)
-            discard redis_client.expire(key = tkey, seconds = 86400)
-            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
-            discard redis_client.exec()
-          except:
-            redis_client = redis.open()
-          await sleepAsync(3000)
-        else:
-          await sleepAsync(fib(7 - countdown) shl 10)
-        get_result = try: redis_client.get("lock-detect." & @"boxid" & "." & $board & "." & $lock) except: redisNil
-        countdown -= 1
-      if get_result == redisNil:
-        resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-      elif get_result == "0":
-        resp Http200, $ %*{"code": 1, "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": false}, "application/json"
-      else:
-        resp Http200, $ %*{"code": 1, "cmd": "detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": true}, "application/json"
-#+end_src
-** 测物加锁状态
-#+begin_src nim :noweb-ref lock-status-detect
-  get "/@boxid/lock-status-detect/@boardid/@lockid":
-    check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & "/" & @"lockid"):
-      let
-        board = parseInt(@"boardid")
-        lock = parseInt(@"lockid")
-        expires_at = epochTime().toInt() + 30
-        json = %*{"command": "lock-status-detect", "board": board, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 3), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
-        dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-        tkey = "tasks." & @"boxid"
-      var okay = false
-      try:
-        redis_client.multi()
-        discard redis_client.rpush(key =tkey, value = $json)
-        discard redis_client.expire(key = tkey, seconds = 86400)
-        discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
-        discard redis_client.exec()
-        okay = true
-      except:
-        redis_client = redis.open()
-        okay = false
-      if okay:
-        await sleepAsync(3000)
-        var
-          countdown = 7
-          status_get_result = try: redis_client.get(skey) except: redisNil
-          detect_get_result = try: redis_client.get(dkey) except: redisNil
-        while (status_get_result == redisNil or detect_get_result == redisNil) and countdown != 0:
-          await sleepAsync(fib(7 - countdown) shl 10)
-          if status_get_result == redisNil:
-            status_get_result = try: redis_client.get(skey) except: redisNil
-          if detect_get_result == redisNil:
-            detect_get_result = try: redis_client.get(dkey) except: redisNil
-          countdown -= 1
-        if status_get_result == redisNil or detect_get_result == redisNil:
-          if status_get_result == redisNil and detect_get_result == redisNil:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-          elif status_get_result == redisNil:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}), "application/json"
-          else:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
-        else:
-          resp Http200, $ %*{"code": 1, "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
-      else:
-        resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-status-detect", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-#+end_src
-** 开锁加测物加锁状态
-#+begin_src nim :noweb-ref lock-off-status-detect
-  put "/@boxid/lock-status-detect/@boardid/@lockid":
-    check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & "/" & @"lockid"):
+** 开锁加锁状态
+#+begin_src nim :noweb-ref lock-off-status
+  put "/@boxid/lock-status/@boardid/@lockid":
+    check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & "/" & @"lockid"):
       let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         expires_at = epochTime().toInt() + 30
         json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
-        dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -275,7 +191,7 @@
         discard redis_client.rpush(key = tkey, value = $json)
         discard redis_client.expire(key = tkey, seconds = 86400)
         discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
-        discard redis_client.del(@[skey, dkey])
+        discard redis_client.del(@[skey])
         discard redis_client.exec()
         okay = true
       except:
@@ -286,31 +202,23 @@
         var
           countdown = 7
           status_get_result = try: redis_client.get(skey) except: redisNil
-          detect_get_result = try: redis_client.get(dkey) except: redisNil
-        while (status_get_result == redisNil or detect_get_result == redisNil) and countdown != 0:
+        while status_get_result == redisNil and countdown != 0:
           await sleepAsync(fib(7 - countdown) shl 10)
           if status_get_result == redisNil:
             status_get_result = try: redis_client.get(skey) except: redisNil
-          if detect_get_result == redisNil:
-            detect_get_result = try: redis_client.get(dkey) except: redisNil
           countdown -= 1
-        if status_get_result == redisNil or detect_get_result == redisNil:
-          if status_get_result == redisNil and detect_get_result == redisNil:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-          elif status_get_result == redisNil:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true}), "application/json"
-          else:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
+        if status_get_result == redisNil:
+          resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
         else:
-          resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+          resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
       else:
         resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
-** 开多把锁加测物加锁状态
-开多把锁后，仅返回第一把锁的状态和测物条状态。
-#+begin_src nim :noweb-ref locks-off-status-detect
-  post "/@boxid/lock-status-detect/@boardid":
-    check_signature(request, "lock-status-detect" & "/"  & @"boxid" & "/lock-status-detect/" & @"boardid" & request.body):
+** 开多把锁加锁状态
+开多把锁后，仅返回第一把锁的状态。
+#+begin_src nim :noweb-ref locks-off-status
+  post "/@boxid/lock-status/@boardid":
+    check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & request.body):
       let
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
@@ -332,9 +240,7 @@
           var
             lock = locks[i]
             skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
-            dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-          echo skey
-          discard redis_client.del(@[skey, dkey])
+          discard redis_client.del(@[skey])
         okay = true
       except:
         redis_client = redis.open()
@@ -344,37 +250,22 @@
         var
           countdown = 7
           skey = "lock-status." & @"boxid" & "." & $board & "." & $locks[0]
-          dkey = "lock-detect." & @"boxid" & "." & $board & "." & $locks[0]
           status_get_result = try: redis_client.get(skey) except: redisNil
-          detect_get_result = try: redis_client.get(dkey) except: redisNil
-        while (status_get_result == redisNil or detect_get_result == redisNil) and countdown != 0:
+        while status_get_result == redisNil and countdown != 0:
           await sleepAsync(fib(7 - countdown) shl 10)
           if status_get_result == redisNil:
             status_get_result = try: redis_client.get(skey) except: redisNil
-          if detect_get_result == redisNil:
-            detect_get_result = try: redis_client.get(dkey) except: redisNil
           countdown -= 1
-        if status_get_result == redisNil or detect_get_result == redisNil:
-          if status_get_result == redisNil and detect_get_result == redisNil:
-            if len(locks) == 1:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
-            else:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态和测物状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
-          elif status_get_result == redisNil:
-            if len(locks) == 1:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "empty": if detect_get_result == "0": false else: true}), "application/json"
-            else:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "empty": if detect_get_result == "0": false else: true}), "application/json"
+        if status_get_result == redisNil:
+          if len(locks) == 1:
+            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
           else:
-            if len(locks) == 1:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
-            else:
-              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到测物状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}), "application/json"
+            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
         else:
           if len(locks) == 1:
-            resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+            resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
           else:
-            resp Http200, $ %*{"code": 1, "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "empty": if detect_get_result == "0": false else: true, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+            resp Http200, $ %*{"code": 1, "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
       else:
         if len(locks) == 1:
           resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
@@ -613,7 +504,6 @@
         countdown = 7
         get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
       while get_result == redisNil and countdown != 0:
-        echo "countdown ", countdown
         if countdown == 7:
           try:
             redis_client.multi()
@@ -730,17 +620,22 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
               actions
             else:
               #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+              info request.path, " 请求无法通过签名检查"
               actions
           else:
             #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+            info request.path, " 请求无法通过签名检查"
             actions
         else:
           #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+          info request.path, " 请求无法通过签名检查"
           actions
       else:
         #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+        info request.path, " 请求无法通过签名检查"
         actions
     else:
       #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+      info request.path, " 请求无法通过签名检查"
       actions
 #+end_src

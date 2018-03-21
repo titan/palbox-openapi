@@ -110,34 +110,7 @@ FORMAT: 1A
           "lock": 1
         }
 
-## 测物条 [/{boxid}/detect/{boardid}/{lockid}]
-
-### 获取测物条状态 [GET]
-
-+ Response 200 (application/json)
-
-        {
-          "code": 1,
-          "cmd": "detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "empty": true
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到测物状态",
-          "cmd": "detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "empty": true
-        }
-
-## 锁板加测物 [/{boxid}/lock-status-detect/{boardid}]
+## 锁板加状态 [/{boxid}/lock-status/{boardid}]
 ### 开多把锁 [POST]
 
 + Request (application/x-www-form-urlencoded)
@@ -154,7 +127,6 @@ FORMAT: 1A
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
           "locks": [1, 2]
-          "empty": true,
           "opened": true,
           "closed": false
         }
@@ -163,7 +135,7 @@ FORMAT: 1A
 
         {
           "code": 404,
-          "msg": "无法查询到锁状态和测物状态。",
+          "msg": "无法查询到锁状态。",
           "cmd": "locks-off",
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
@@ -178,21 +150,7 @@ FORMAT: 1A
           "cmd": "locks-off",
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
-          "locks": [1, 2],
-          "empty": true
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到测物状态。",
-          "cmd": "locks-off",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "locks": [1, 2],
-          "opened": true,
-          "closed": false
+          "locks": [1, 2]
         }
 
 + Response 200 (application/json)
@@ -206,71 +164,7 @@ FORMAT: 1A
           "locks": [1, 2]
         }
 
-## 锁加测物 [/{boxid}/lock-status-detect/{boardid}/{lockid}]
-
-### 获取锁状态和测物条状态 [GET]
-
-+ Response 200 (application/json)
-
-        {
-          "code": 1,
-          "cmd": "lock-status-detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "empty": true,
-          "opened": true,
-          "closed": false
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到锁状态和测物状态。",
-          "cmd": "lock-status-detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到锁状态。",
-          "cmd": "lock-status-detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "empty": true
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到测物状态。",
-          "cmd": "lock-status-detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "opened": true,
-          "closed": false
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 500,
-          "msg": "无法连接到缓存服务器。",
-          "cmd": "lock-status-detect",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "opened": true,
-          "closed": false
-        }
+## 锁加状态 [/{boxid}/lock-status/{boardid}/{lockid}]
 
 ### 开锁 [PUT]
 
@@ -282,7 +176,6 @@ FORMAT: 1A
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
           "lock": 1,
-          "empty": true,
           "opened": true,
           "closed": false
         }
@@ -291,7 +184,7 @@ FORMAT: 1A
 
         {
           "code": 404,
-          "msg": "无法查询到锁状态和测物状态。",
+          "msg": "无法查询到锁状态。",
           "cmd": "lock-off",
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
@@ -306,21 +199,7 @@ FORMAT: 1A
           "cmd": "lock-off",
           "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
           "board": 1,
-          "lock": 1,
-          "empty": true
-        }
-
-+ Response 200 (application/json)
-
-        {
-          "code": 404,
-          "msg": "无法查询到测物状态。",
-          "cmd": "lock-off",
-          "boxid": "31-FF-DB-05-48-54-34-39-31-61-18-43",
-          "board": 1,
-          "lock": 1,
-          "opened": true,
-          "closed": false
+          "lock": 1
         }
 
 + Response 200 (application/json)
@@ -338,7 +217,7 @@ FORMAT: 1A
 
 ## 充电器 [/{boxid}/chargers/{chargerid}]
 
-chargerid 的取值范围是 1, 2, 3, 4
+chargerid 的取值范围是 1 ~ 12
 
 ### 获取充电状态 [GET]
 
