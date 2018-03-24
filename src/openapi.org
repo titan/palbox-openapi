@@ -64,7 +64,7 @@
 * 电控锁管理
 ** 开锁
 
-发送开锁指令后，同时也清空缓存里的锁状态。
+发送开锁指令后，同时也清空缓存里的锁状态。命令有效期 10 秒。
 
 #+begin_src nim :noweb-ref lock-off
   put "/@boxid/locks/@boardid/@lockid":
@@ -73,7 +73,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 0)
-        json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
         tkey = "tasks." & @"boxid"
@@ -94,6 +94,7 @@
         resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁
+命令有效期 10 秒。
 #+begin_src nim :noweb-ref locks-off
   post "/@boxid/locks/@boardid":
     check_signature(request, "locks-off" & "/"  & @"boxid" & "/locks/" & @"boardid" & request.body):
@@ -102,9 +103,9 @@
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         pins = locks.mapIt(generate_lock_pin(board, it, 0))
         json = if len(pins) == 1:
-                 %*{"command": "lock-off", "board": board, "lock": locks[0], "expires-at": epochTime().toInt() + 30, "pin": pins[0], "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+                 %*{"command": "lock-off", "board": board, "lock": locks[0], "expires-at": epochTime().toInt() + 10, "pin": pins[0], "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
                else:
-                 %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 30, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+                 %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 10, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -137,7 +138,7 @@
 
 如果缓存中有锁的状态，则直接返回结果。否则循环三次检查缓存中是否有锁的状态，第一
 次检查前，给智能柜下发查询锁状态的命令。每次循环间隔一秒，如果三次循环后，还没有
-结果，则返回 404 错误。
+结果，则返回 404 错误。命令有效期 10 秒。
 
 #+begin_src nim :noweb-ref lock-status
   get "/@boxid/locks/@boardid/@lockid":
@@ -146,7 +147,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 1)
-        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var
         countdown = 7
@@ -183,7 +184,7 @@
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
         pin = generate_lock_pin(board, lock, 1)
-        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var
         countdown = 7
@@ -211,13 +212,14 @@
         resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
 #+end_src
 ** 开锁加锁状态
+命令有效期 10 秒。
 #+begin_src nim :noweb-ref lock-off-status
   put "/@boxid/lock-status/@boardid/@lockid":
     check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & "/" & @"lockid"):
       let
         board = parseInt(@"boardid")
         lock = parseInt(@"lockid")
-        expires_at = epochTime().toInt() + 30
+        expires_at = epochTime().toInt() + 10
         json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": expires_at, "pin": generate_lock_pin(board, lock, 0), "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
         tkey = "tasks." & @"boxid"
@@ -251,7 +253,7 @@
         resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁加锁状态
-开多把锁后，仅返回第一把锁的状态。
+开多把锁后，仅返回第一把锁的状态。 命令有效期 10 秒。
 #+begin_src nim :noweb-ref locks-off-status
   post "/@boxid/lock-status/@boardid":
     check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & request.body):
@@ -259,7 +261,7 @@
         board = parseInt(@"boardid")
         locks = request.params["locks"].split(',').mapIt(parseInt(it))
         pins = locks.mapIt(generate_lock_pin(board, it, 0))
-        expires_at = epochTime().toInt() + 30
+        expires_at = epochTime().toInt() + 10
         json = if len(pins) == 1:
                  %*{"command": "lock-off", "board": board, "lock": locks[0], "expires-at": expires_at, "pin": pins[0], "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
                else:
@@ -311,14 +313,14 @@
 * 照明管理
 ** 开灯
 
-开灯命令的有效性可以达到 5 分钟
+开灯命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref light-on
   put "/@boxid/light/on":
     check_signature(request, "light-on" & "/"  & @"boxid" & "/light/on"):
       let
         pin = generate_pin(0)
-        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -337,14 +339,14 @@
 #+end_src
 ** 关灯
 
-关灯命令的有效性可以达到 5 分钟
+关灯命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref light-off
   put "/@boxid/light/off":
     check_signature(request, "light-off" & "/"  & @"boxid" & "/light/off"):
       let
         pin = generate_pin(0)
-        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -365,14 +367,14 @@
 * 风扇管理
 ** 开启
 
-开启风扇命令的有效性可以达到 3 个小时
+开启风扇命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref fan-on
   put "/@boxid/fan/on":
     check_signature(request, "fan-on" & "/"  & @"boxid" & "/fan/on"):
       let
         pin = generate_pin(1)
-        json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -392,14 +394,14 @@
 
 ** 关闭
 
-关闭风扇命令的有效性可以达到 3 个小时
+关闭风扇命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref fan-off
   put "/@boxid/fan/off":
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
       let
         pin = generate_pin(1)
-        json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 3 * 60 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -420,14 +422,14 @@
 * 紫外线管理
 ** 开灯
 
-开灯命令的有效性可以达到 5 分钟
+开灯命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref ultraviolet-on
   put "/@boxid/ultraviolet/on":
     check_signature(request, "ultraviolet-on" & "/"  & @"boxid" & "/ultraviolet/on"):
       let
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -447,14 +449,14 @@
 
 ** 关灯
 
-关灯命令的有效性可以达到 5 分钟
+关灯命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref ultraviolet-off
   put "/@boxid/ultraviolet/off":
     check_signature(request, "ultraviolet-off" & "/"  & @"boxid" & "/ultraviolet/off"):
       let
         pin = generate_pin(2)
-        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -475,14 +477,14 @@
 * 摄像头管理
 ** 打开
 
-打开摄像头命令的有效性可以达到 5 分钟
+打开摄像头命令的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref camera-on
   put "/@boxid/camera/on":
     check_signature(request, "camera-on" & "/"  & @"boxid" & "/camera/on"):
       let
         pin = generate_pin(3)
-        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -502,14 +504,14 @@
 
 ** 关闭
 
-关闭摄像头的有效性可以达到 5 分钟
+关闭摄像头的有效性可以达到 10 秒
 
 #+begin_src nim :noweb-ref camera-off
   put "/@boxid/camera/off":
     check_signature(request, "camera-off" & "/"  & @"boxid" & "/camera/off"):
       let
         pin = generate_pin(3)
-        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 5 * 60, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -529,14 +531,14 @@
 
 * 充电管理
 ** 查询
-借用摄像头的 PIN
+借用摄像头的 PIN。命令有效期 10 秒。
 #+begin_src nim :noweb-ref charger-status
   get "/@boxid/chargers/@chargerid":
     check_signature(request, "charger-status" & "/"  & @"boxid" & "/chargers/" & @"chargerid"):
       let
         charger = parseInt(@"chargerid")
         pin = generate_pin(3)
-        json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 30, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var
         countdown = 7
@@ -579,6 +581,7 @@
 * 音频管理
 speaker 的编号与 card reader 的编号一致。
 ** 播放
+命令有效期 10 秒。
 #+begin_src nim :noweb-ref play
   put "/@boxid/speakers/@speaker/audios/@audio":
     check_signature(request, "play" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/" & @"audio"):
@@ -586,7 +589,7 @@ speaker 的编号与 card reader 的编号一致。
         speaker = parseInt(@"speaker")
         audio = parseInt(@"audio")
         pin = generate_lock_pin(speaker, audio, 0)
-        json = %* {"command": "play", "speaker": speaker, "audio": audio, "pin": pin, "expires-at": epochTime().toInt() + 30, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %* {"command": "play", "speaker": speaker, "audio": audio, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
