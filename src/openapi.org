@@ -612,7 +612,7 @@ speaker 的编号与 card reader 的编号一致。
    PIN 为当前时间戳与 64 取模，外加板号，锁号，命令编号的结果，用于保证锁控板对同一个命令只执行一次。
 #+begin_src nim :noweb-ref generate-lock-pin
   proc generate_lock_pin(board: int, lock: int, cmd: int): int =
-    result = cast[int](cast[int64](epochTime().toInt() shr 3) mod 64) or (board shl 13) or (lock shl 8) or (cmd shl 6)
+    result = (cast[int](cast[int64](epochTime().toInt() shr 3) mod 64) or (board shl 13) or (lock shl 8) or (cmd shl 6)) and 0xFFFF
 #+end_src
 *** 其他 PIN 值
 
@@ -626,7 +626,7 @@ speaker 的编号与 card reader 的编号一致。
 
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
-    result = cast[int](cast[int64](epochTime().toInt() shr 3) and 8191) or (dev shl 13)
+    result = (cast[int](cast[int64](epochTime().toInt() shr 3) and 8191) or (dev shl 13)) and 0xFFFF
 #+end_src
 
 ** fib
