@@ -14,6 +14,7 @@
   settings:
     port = 5080.Port
 
+  <<device-constant>>
   var redis_client = redis.open()
   <<generate-lock-pin>>
   <<generate-pin>>
@@ -335,7 +336,7 @@
     check_signature(request, "light-on" & "/"  & @"boxid" & "/light/on"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(0)
+          pin = generate_pin(LIGHT)
           json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "light-on", pin):
@@ -363,7 +364,7 @@
     check_signature(request, "light-off" & "/"  & @"boxid" & "/light/off"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(0)
+          pin = generate_pin(LIGHT)
           json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "light-off", pin):
@@ -393,7 +394,7 @@
     check_signature(request, "fan-on" & "/"  & @"boxid" & "/fan/on"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(1)
+          pin = generate_pin(FAN)
           json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "fan-on", pin):
@@ -422,7 +423,7 @@
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(1)
+          pin = generate_pin(FAN)
           json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "fan-off", pin):
@@ -452,7 +453,7 @@
     check_signature(request, "ultraviolet-on" & "/"  & @"boxid" & "/ultraviolet/on"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(2)
+          pin = generate_pin(ULTRAVIOLET)
           json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "ultraviolet-on", pin):
@@ -481,7 +482,7 @@
     check_signature(request, "ultraviolet-off" & "/"  & @"boxid" & "/ultraviolet/off"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(2)
+          pin = generate_pin(ULTRAVIOLET)
           json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "ultraviolet-off", pin):
@@ -511,7 +512,7 @@
     check_signature(request, "camera-on" & "/"  & @"boxid" & "/camera/on"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(3)
+          pin = generate_pin(CAMERA)
           json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "camera-on", pin):
@@ -540,7 +541,7 @@
     check_signature(request, "camera-off" & "/"  & @"boxid" & "/camera/off"):
       check_online(@"boxid"):
         let
-          pin = generate_pin(3)
+          pin = generate_pin(CAMERA)
           json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "camera-off", pin):
@@ -569,7 +570,7 @@
       check_online(@"boxid"):
         let
           charger = parseInt(@"chargerid")
-          pin = generate_pin(3)
+          pin = generate_pin(CHARGER)
           json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "chager-status", pin):
@@ -651,17 +652,27 @@ speaker 的编号与 card reader 的编号一致。
 #+end_src
 *** 其他 PIN 值
 
-   PIN 为当前时间戳除 10 与 8192 取模，外加设备编号的结果，用于保证每10秒内，对同一个设备只执行一次命令。
+   PIN 为当前时间戳除 8 与 4096 取模，外加设备编号的结果，用于保证每8秒内，对同一个设备只执行一次命令。
 | no | dev         |
 |----+-------------|
-|  0 | light       |
-|  1 | fan         |
-|  2 | ultraviolet |
-|  3 | camera      |
+|  1 | light       |
+|  2 | fan         |
+|  3 | ultraviolet |
+|  4 | camera      |
+|  5 | charger     |
+
+#+begin_src nim :noweb-ref device-constant
+  const
+    LIGHT = 1
+    FAN = 2
+    ULTRAVIOLET = 3
+    CAMERA = 4
+    CHARGER = 5
+#+end_src
 
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
-    result = (cast[int](cast[int64](epochTime().toInt() shr 3) and 8191) or (dev shl 13)) and 0xFFFF
+    result = (cast[int](cast[int64](epochTime().toInt() shr 3) and 4095) or (dev shl 12)) and 0xFFFF
 #+end_src
 
 ** fib
