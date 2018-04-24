@@ -18,6 +18,7 @@
   var redis_client = redis.open()
   <<generate-lock-pin>>
   <<generate-pin>>
+  <<generate-pin-1>>
   <<fib>>
   <<check-token>>
   <<check-signature>>
@@ -45,6 +46,9 @@
     <<charger-status>>
     <<online-detect>>
     <<play>>
+    <<volume-up>>
+    <<volume-down>>
+    <<config-gprs>>
 
   runforever()
 #+end_src
@@ -642,6 +646,89 @@ speaker 的编号与 card reader 的编号一致。
           else:
             resp Http500, ""
 #+end_src
+** 增加音量
+命令有效期 10 秒。
+#+begin_src nim :noweb-ref volume-up
+  put "/@boxid/speakers/@speaker/volume/up":
+    check_signature(request, "volume-up" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/volume/up"):
+      check_online(@"boxid"):
+        let
+          speaker = parseInt(@"speaker")
+          pin = generate_pin_1(speaker)
+          json = %* {"command": "volume-up", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "volume-up", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, "Okay"
+          else:
+            resp Http500, ""
+#+end_src
+** 减少音量
+命令有效期 10 秒。
+#+begin_src nim :noweb-ref volume-up
+  put "/@boxid/speakers/@speaker/volume/down":
+    check_signature(request, "volume-down" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/volume/down"):
+      check_online(@"boxid"):
+        let
+          speaker = parseInt(@"speaker")
+          pin = generate_pin_1(speaker)
+          json = %* {"command": "volume-down", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "volume-down", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, "Okay"
+          else:
+            resp Http500, ""
+#+end_src
+* GPRS管理
+** 配置
+#+begin_src nim :noweb-ref config-gprs
+  post "/@boxid/gprs":
+    check_signature(request, "config-gprs" & "/"  & @"boxid" & "/gprs"):
+      check_online(@"boxid"):
+        let
+          gprs_heart_rate = parseInt(request.params["gprs-heart-rate"])
+          gprs_timeout = parseInt(request.params["gprs-timeout"])
+          pin = generate_pin_1(0)
+          json = %* {"command": "config-gprs", "pin": pin, "gprs-heart-rate": gprs_heart_rate, "gprs-timeout": gprs_timeout, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "config-gprs", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.rpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, "Okay"
+          else:
+            resp Http500, ""
+#+end_src
+
 * 辅助函数
 ** 生成 PIN 值
 *** 锁 PIN 值
@@ -673,6 +760,15 @@ speaker 的编号与 card reader 的编号一致。
 #+begin_src nim :noweb-ref generate-pin
   proc generate_pin(dev: int): int =
     result = (cast[int](cast[int64](epochTime().toInt() shr 3) and 4095) or (dev shl 12)) and 0xFFFF
+#+end_src
+
+*** 秒 PIN 值
+
+PIN 为当前时间戳
+
+#+begin_src nim :noweb-ref generate-pin-1
+  proc generate_pin_1(dev: int): int =
+    result = (cast[int](epochTime().toInt() and 8191) or (dev shl 13)) and 0xFFFF
 #+end_src
 
 ** fib
