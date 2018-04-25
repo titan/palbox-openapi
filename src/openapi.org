@@ -355,9 +355,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "light-on", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-on"}), "application/json"
 #+end_src
 ** 关灯
 
@@ -383,9 +383,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "light-off", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-off"}), "application/json"
 #+end_src
 
 * 风扇管理
@@ -413,9 +413,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "fan-on", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-on"}), "application/json"
 #+end_src
 
 ** 关闭
@@ -442,9 +442,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "fan-off", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-off"}), "application/json"
 #+end_src
 
 * 紫外线管理
@@ -472,9 +472,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "ultraviolet-on", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "ultraviolet-on"}), "application/json"
 #+end_src
 
 ** 关灯
@@ -501,9 +501,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "ultraviolet-off", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "ultraviolet-off"}), "application/json"
 #+end_src
 
 * 摄像头管理
@@ -531,9 +531,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "camera-on", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "camera-on"}), "application/json"
 #+end_src
 
 ** 关闭
@@ -560,9 +560,9 @@
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "camera-off", "boxid": @"boxid"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "camera-off"}), "application/json"
 #+end_src
 
 * 充电管理
@@ -622,7 +622,7 @@ speaker 的编号与 card reader 的编号一致。
 命令有效期 10 秒。
 #+begin_src nim :noweb-ref play
   put "/@boxid/speakers/@speaker/audios/@audio":
-    check_signature(request, "play" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/" & @"audio"):
+    check_signature(request, "play" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/audios/" & @"audio"):
       check_online(@"boxid"):
         let
           speaker = parseInt(@"speaker")
@@ -642,9 +642,9 @@ speaker 的编号与 card reader 的编号一致。
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "cmd": "play", "boxid": @"boxid", "speaker": $speaker, "audio": $audio}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "play", "speaker": $speaker, "audio": $audio}), "application/json"
 #+end_src
 ** 增加音量
 命令有效期 10 秒。
@@ -669,9 +669,9 @@ speaker 的编号与 card reader 的编号一致。
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "volume-up", "speaker": speaker}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-on"}), "application/json"
 #+end_src
 ** 减少音量
 命令有效期 10 秒。
@@ -696,9 +696,9 @@ speaker 的编号与 card reader 的编号一致。
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "volume-down", "speaker": speaker}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-down"}), "application/json"
 #+end_src
 * GPRS管理
 ** 配置
@@ -724,9 +724,9 @@ speaker 的编号与 card reader 的编号一致。
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, "Okay"
+            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "config-gprs"}, "application/json"
           else:
-            resp Http500, ""
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "config-gprs"}), "application/json"
 #+end_src
 
 * 辅助函数
