@@ -16,6 +16,7 @@
 <<volume-down>>
 <<light-on>>
 <<light-off>>
+<<token>>
 
 #+end_src
 
@@ -393,4 +394,51 @@ chargerid 的取值范围是 1 ~ 12
 <<too-many-request-error>>
 <<connect-cache-error>>
 <<offline-error>>
+#+end_src
+** Token
+
+#+begin_src markdown :noweb-ref token
+## 获取 Token [/{boxid}/token/{board}/{locks}]
+
+### 签名计算
+    hmac-sha1(appkey, "get-token" + "/" + boxid + "/token/" + board + "/" + locks + date)
+
+### 请求
+
+#### 一个 Token
+
+    GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11 HTTP/1.1
+    Host: dev.fengchaohuzhu.com
+    Content-Length: 0
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:a006239e4bf1961b11d8956890b1c0e329ed44ba
+    Date: Sat, 27 Jan 2018 09:55:00 GMT
+
+#### 两个 Token
+
+    GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11,12 HTTP/1.1
+    Host: dev.fengchaohuzhu.com
+    Content-Length: 0
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:7e0113e9eb851b2b75f10e85ef7fa6083ca103a2
+    Date: Sat, 27 Jan 2018 09:55:00 GMT
+
+### 响应
+
+#### 一个 Token
+
+    HTTP/1.1 200 OK
+    Content-Length: 188
+    Content-Type: application/json
+
+    {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"lock":11,"token":731107,"timestamp":1524795868,"randkey":["05D7FF32","33374852","51077539","0183C690"]}
+
+#### 两个 Token
+
+    HTTP/1.1 200 OK
+    Content-Length: 204
+    Content-Type: application/json
+
+    {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"locks":[11,12],"tokens":[442333,391307],"timestamp":1524817420,"randkey":["05D7FF32","33374852","51077539","0183C7F7"]}
+
+
+<<signature-error>>
 #+end_src

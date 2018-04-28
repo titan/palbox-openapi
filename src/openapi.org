@@ -2,6 +2,7 @@
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapi.nim
   import jester, asyncdispatch, json, random, redis, times, cgi
   import parseutils, strutils, sequtils, logging, hmac, strtabs, strfmt
+  import openapipkg/mt19937
 
   var L = newConsoleLogger(fmtStr = "$levelid [$datetime] : ")
   addHandler(L)
@@ -49,6 +50,8 @@
     <<volume-up>>
     <<volume-down>>
     <<config-gprs>>
+    <<get-token>>
+    <<ping>>
 
   runforever()
 #+end_src
@@ -608,7 +611,7 @@
   get "/@boxid":
     check_signature(request, "online-detect" & "/"  & @"boxid"):
       let
-        now = getLocalTime(getTime()) - 1.minutes
+        now = getLocalTime(getTime())
         activated_key = "box.activated." & getDateStr() & "." & now.hour.format("02d") & "." & now.minute.format("02d")
         ismember = redis_client.sismember(activated_key, @"boxid")
       if ismember != 0:
@@ -729,6 +732,145 @@ speaker 的编号与 card reader 的编号一致。
             resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "config-gprs"}), "application/json"
 #+end_src
 
+* TOKEN管理
+** 获取
+#+begin_src nim :noweb-ref get-token
+  get "/@boxid/token/@board/@locks":
+    check_signature(request, "get-token" & "/"  & @"boxid" & "/token/" & @"board" & "/" & @"locks"):
+      let
+        board = parseInt(@"board")
+        locks = split(@"locks", ',').mapIt(parseInt(it))
+        boxids = @"boxid".split('-').mapIt(parseHexInt(it))
+        now = epochTime().toInt()
+        randkey = @[
+          cast[uint32]((boxids[3] shl 24) or (boxids[2] shl 16) or (boxids[1] shl 8) or (boxids[0])),
+          cast[uint32]((boxids[7] shl 24) or (boxids[6] shl 16) or (boxids[5] shl 8) or (boxids[4])),
+          cast[uint32]((boxids[11] shl 24) or (boxids[10] shl 16) or (boxids[9] shl 8) or (boxids[8])),
+          cast[uint32](int(now / 60))
+        ]
+      var
+        tokens: seq[uint32] = @[]
+        mt = mt19937.newMersenneTwister(randkey)
+        found_token = false
+        t = 0'u32
+      block generating_token:
+        for b in 1..8:
+          for l in 1..20:
+            t = mt.getNum mod 1000000'u32
+            if b == board:
+              for lock in locks:
+                if l == lock:
+                  tokens.insert(t, 0)
+                  found_token = true
+              if len(locks) == len(tokens):
+                break generating_token
+      if len(locks) == 1:
+        if found_token:
+          resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "token": cast[int](tokens[0]), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+        else:
+          resp Http200, $ %*{"code": 404, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "timestamp":now, "msg": encode_url("无法找到锁控板或锁")}
+      else:
+        if found_token:
+          resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "locks": locks, "tokens": tokens.mapIt(cast[int](it)), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+        else:
+          resp Http200, $ %*{"code": 404, "cmd": "get-token", "boxid": @"boxid", "board": board, "locks": locks, "timestamp":now, "msg": encode_url("无法找到锁控板或锁")}
+
+
+#+end_src
+* 网络测试
+#+begin_src nim :noweb-ref ping
+  put "/@boxid":
+    check_signature(request, "ping" & "/"  & @"boxid"):
+      let
+        pin = generate_pin_1(0)
+        json = %*{"command": "ping", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
+      var okay = false
+      try:
+        redis_client.multi()
+        discard redis_client.rpush(key = tkey, value = $json)
+        discard redis_client.expire(key = tkey, seconds = 86400)
+        discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+        discard redis_client.exec()
+        okay = true
+      except:
+        redis_client = redis.open()
+      if okay:
+        resp Http200, $ %*{"code": 1, "cmd": "ping", "boxid": @"boxid"}, "application/json"
+      else:
+        resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "ping"}), "application/json"
+#+end_src
+* MT19937
+#+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapipkg/mt19937.nim
+  type
+    MersenneTwister* = object
+      mt: array[0..623, uint32]
+      index: int
+
+  {.deprecated: [TMersenneTwister: MersenneTwister].}
+
+  proc newMersenneTwister*(seed: uint32): MersenneTwister =
+    result.index = 0
+    result.mt[0] = seed
+    for i in 1'u32 .. 623'u32:
+      result.mt[i] = (0x6c078965'u32 * (result.mt[i-1] xor (result.mt[i-1] shr 30'u32)) + i)
+
+  proc newMersenneTwister*(seeds: seq[uint32]): MersenneTwister =
+    result = newMersenneTwister(19650218'u32)
+    var
+      i = 1
+      j = 0
+      k = if 624 > len(seeds): 624 else: len(seeds)
+    while k != 0:
+      result.mt[i] = (result.mt[i] xor ((result.mt[i - 1] xor (result.mt[i - 1] shr 30'u32)) * 1664525'u32)) + seeds[j] + cast[uint32](j);
+      #result.mt[i] = result.mt[i] and 0xFFFFFFFF'u32
+      i += 1
+      j += 1
+      if i >= 624:
+        result.mt[0] = result.mt[624 - 1]
+        i = 1
+      if j >= len(seeds):
+        j = 0
+      k -= 1
+    k = 624 - 1
+    while k != 0:
+      result.mt[i] = (result.mt[i] xor ((result.mt[i - 1] xor (result.mt[i - 1] shr 30'u32)) * 1566083941'u32)) - cast[uint32](i)
+      #result.mt[i] = result.mt[i] and 0xFFFFFFFF'u32
+      i += 1
+      if i >= 624:
+        result.mt[0] = result.mt[624 - 1]
+        i = 1
+      k -= 1
+    result.mt[0] = 0x80000000'u32
+
+  proc generateNumbers(m: var MersenneTwister) =
+    for i in 0..623:
+      var y = (m.mt[i] and 0x80000000'u32) +
+              (m.mt[(i+1) mod 624] and 0x7fffffff'u32)
+      m.mt[i] = m.mt[(i+397) mod 624] xor uint32(y shr 1'u32)
+      if (y mod 2'u32) != 0:
+        m.mt[i] = m.mt[i] xor 0x9908b0df'u32
+
+  proc getNum*(m: var MersenneTwister): uint32 =
+    ## Returns the next pseudo random number ranging from 0 to high(uint32)
+    if m.index == 0:
+      generateNumbers(m)
+    result = m.mt[m.index]
+    m.index = (m.index + 1) mod m.mt.len
+
+    result = result xor (result shr 11'u32)
+    result = result xor ((result shl 7'u32) and 0x9d2c5680'u32)
+    result = result xor ((result shl 15'u32) and 0xefc60000'u32)
+    result = result xor (result shr 18'u32)
+
+  # Test
+  when not defined(testing) and isMainModule:
+    var mt = newMersenneTwister(@[1'u32, 2'u32])
+
+    for i in 0..9:
+      echo mt.getNum
+
+#+end_src
 * 辅助函数
 ** 生成 PIN 值
 *** 锁 PIN 值
