@@ -49,7 +49,7 @@
     <<play>>
     <<volume-up>>
     <<volume-down>>
-    <<config-gprs>>
+    <<config-network>>
     <<get-token>>
     <<ping>>
 
@@ -344,7 +344,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(LIGHT)
-          json = %*{"command": "light-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "light-on", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "light-on", pin):
           var okay = false
@@ -372,7 +372,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(LIGHT)
-          json = %*{"command": "light-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "light-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "light-off", pin):
           var okay = false
@@ -402,7 +402,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(FAN)
-          json = %*{"command": "fan-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "fan-on", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "fan-on", pin):
           var okay = false
@@ -428,26 +428,26 @@
 #+begin_src nim :noweb-ref fan-off
   put "/@boxid/fan/off":
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
-      check_online(@"boxid"):
-        let
-          pin = generate_pin(FAN)
-          json = %*{"command": "fan-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-          tkey = "tasks." & @"boxid"
-        check_pin(@"boxid", "fan-off", pin):
-          var okay = false
-          try:
-            redis_client.multi()
-            discard redis_client.rpush(key = tkey, value = $json)
-            discard redis_client.expire(key = tkey, seconds = 86400)
-            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
-            discard redis_client.exec()
-            okay = true
-          except:
-            redis_client = redis.open()
-          if okay:
-            resp Http200, $ %*{"code": 1, "cmd": "fan-off", "boxid": @"boxid"}, "application/json"
-          else:
-            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-off"}), "application/json"
+      #check_online(@"boxid"):
+      let
+        pin = generate_pin(FAN)
+        json = %*{"command": "fan-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        tkey = "tasks." & @"boxid"
+      check_pin(@"boxid", "fan-off", pin):
+        var okay = false
+        try:
+          redis_client.multi()
+          discard redis_client.rpush(key = tkey, value = $json)
+          discard redis_client.expire(key = tkey, seconds = 86400)
+          discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+          discard redis_client.exec()
+          okay = true
+        except:
+          redis_client = redis.open()
+        if okay:
+          resp Http200, $ %*{"code": 1, "cmd": "fan-off", "boxid": @"boxid"}, "application/json"
+        else:
+          resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-off"}), "application/json"
 #+end_src
 
 * 紫外线管理
@@ -461,7 +461,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(ULTRAVIOLET)
-          json = %*{"command": "ultraviolet-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "ultraviolet-on", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "ultraviolet-on", pin):
           var okay = false
@@ -490,7 +490,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(ULTRAVIOLET)
-          json = %*{"command": "ultraviolet-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "ultraviolet-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "ultraviolet-off", pin):
           var okay = false
@@ -520,7 +520,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(CAMERA)
-          json = %*{"command": "camera-on", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "camera-on", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "camera-on", pin):
           var okay = false
@@ -549,7 +549,7 @@
       check_online(@"boxid"):
         let
           pin = generate_pin(CAMERA)
-          json = %*{"command": "camera-off", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %*{"command": "camera-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "camera-off", pin):
           var okay = false
@@ -658,7 +658,7 @@ speaker 的编号与 card reader 的编号一致。
         let
           speaker = parseInt(@"speaker")
           pin = generate_pin_1(speaker)
-          json = %* {"command": "volume-up", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %* {"command": "volume-up", "qos": "<=1", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "volume-up", pin):
           var okay = false
@@ -685,7 +685,7 @@ speaker 的编号与 card reader 的编号一致。
         let
           speaker = parseInt(@"speaker")
           pin = generate_pin_1(speaker)
-          json = %* {"command": "volume-down", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %* {"command": "volume-down", "qos": "<=1", "speaker": speaker, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "volume-down", pin):
           var okay = false
@@ -703,19 +703,19 @@ speaker 的编号与 card reader 的编号一致。
           else:
             resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-down"}), "application/json"
 #+end_src
-* GPRS管理
+* NETWORK管理
 ** 配置
-#+begin_src nim :noweb-ref config-gprs
-  post "/@boxid/gprs":
-    check_signature(request, "config-gprs" & "/"  & @"boxid" & "/gprs"):
+#+begin_src nim :noweb-ref config-network
+  post "/@boxid/network":
+    check_signature(request, "config-network" & "/"  & @"boxid" & "/network"):
       check_online(@"boxid"):
         let
-          gprs_heart_rate = parseInt(request.params["gprs-heart-rate"])
-          gprs_timeout = parseInt(request.params["gprs-timeout"])
+          network_heart_rate = parseInt(request.params["network-heart-rate"])
+          network_timeout = parseInt(request.params["network-timeout"])
           pin = generate_pin_1(0)
-          json = %* {"command": "config-gprs", "pin": pin, "gprs-heart-rate": gprs_heart_rate, "gprs-timeout": gprs_timeout, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %* {"command": "config-network", "pin": pin, "network-heart-rate": network_heart_rate, "network-timeout": network_timeout, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
-        check_pin(@"boxid", "config-gprs", pin):
+        check_pin(@"boxid", "config-network", pin):
           var okay = false
           try:
             redis_client.multi()
@@ -727,9 +727,9 @@ speaker 的编号与 card reader 的编号一致。
           except:
             redis_client = redis.open()
           if okay:
-            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "config-gprs"}, "application/json"
+            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "config-network"}, "application/json"
           else:
-            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "config-gprs"}), "application/json"
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "config-network"}), "application/json"
 #+end_src
 
 * TOKEN管理
@@ -783,7 +783,7 @@ speaker 的编号与 card reader 的编号一致。
     check_signature(request, "ping" & "/"  & @"boxid"):
       let
         pin = generate_pin_1(0)
-        json = %*{"command": "ping", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+        json = %*{"command": "ping", "qos":"<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
         tkey = "tasks." & @"boxid"
       var okay = false
       try:
@@ -1007,11 +1007,11 @@ PIN 值标志是一个对立的 KEY，命名格式为:
       now = getLocalTime(getTime())
       activated_key = "box.activated." & getDateStr() & "." & now.hour.format("02d") & "." & now.minute.format("02d")
     var
-      countdown = 5
+      countdown = 3
       ismember = redis_client.sismember(activated_key, @"boxid")
     while ismember == 0 and countdown > 0:
-      info "Check online after ", fib(6 - countdown) shl 10, " micro seconds"
-      let fut = sleepAsync(fib(6 - countdown) shl 10)
+      info "Check online after ", fib(4 - countdown) shl 10, " micro seconds"
+      let fut = sleepAsync(fib(4 - countdown) shl 10)
       countdown -= 1
       yield fut
       ismember = redis_client.sismember(activated_key, @"boxid")
