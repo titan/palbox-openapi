@@ -1001,14 +1001,22 @@ PIN 值标志是一个对立的 KEY，命名格式为:
 
 在缓存中检查 box 的在线状态，如果不存在，则返回 503 错误。
 
+检查的策略如下：
+
+1. 如果前一秒在线，默认 box 是在线的。
+
+2. 如果前一秒不在线，则连续三次检查现在是否在线，然后返回结果。
+
 #+begin_src nim :noweb-ref check-online
   template check_online(boxid: string, actions: untyped): untyped =
     let
       now = getLocalTime(getTime())
+      last = now - 1.minutes
       activated_key = "box.activated." & getDateStr() & "." & now.hour.format("02d") & "." & now.minute.format("02d")
+      last_activated_key = "box.activated." & getDateStr() & "." & last.hour.format("02d") & "." & last.minute.format("02d")
     var
       countdown = 3
-      ismember = redis_client.sismember(activated_key, @"boxid")
+      ismember = redis_client.sismember(last_activated_key, @"boxid")
     while ismember == 0 and countdown > 0:
       info "Check online after ", fib(4 - countdown) shl 10, " micro seconds"
       let fut = sleepAsync(fib(4 - countdown) shl 10)
