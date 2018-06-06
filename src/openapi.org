@@ -428,26 +428,26 @@
 #+begin_src nim :noweb-ref fan-off
   put "/@boxid/fan/off":
     check_signature(request, "fan-off" & "/"  & @"boxid" & "/fan/off"):
-      #check_online(@"boxid"):
-      let
-        pin = generate_pin(FAN)
-        json = %*{"command": "fan-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-        tkey = "tasks." & @"boxid"
-      check_pin(@"boxid", "fan-off", pin):
-        var okay = false
-        try:
-          redis_client.multi()
-          discard redis_client.lpush(key = tkey, value = $json)
-          discard redis_client.expire(key = tkey, seconds = 86400)
-          discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
-          discard redis_client.exec()
-          okay = true
-        except:
-          redis_client = redis.open()
-        if okay:
-          resp Http200, $ %*{"code": 1, "cmd": "fan-off", "boxid": @"boxid"}, "application/json"
-        else:
-          resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-off"}), "application/json"
+      check_online(@"boxid"):
+        let
+          pin = generate_pin(FAN)
+          json = %*{"command": "fan-off", "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "fan-off", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "fan-off", "boxid": @"boxid"}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "fan-off"}), "application/json"
 #+end_src
 
 * 紫外线管理
