@@ -754,28 +754,42 @@ speaker 的编号与 card reader 的编号一致。
         found_token = false
         t = 0'u32
       block generating_token:
-        for b in 1..8:
-          for l in 1..20:
-            t = mt.getNum mod 1000000'u32
-            if b == board:
-              for lock in locks:
-                if l == lock:
+        if len(locks) == 2 and locks[0] + 1 == locks[1]:
+          for b in 1..8:
+            for l in 1..20:
+              t = mt.getNum mod 1000000'u32
+          for b in 1..8:
+            for l in 1..20:
+              t = mt.getNum mod 1000000'u32
+              if b == board:
+                if l == locks[0]:
                   tokens.insert(t, 0)
                   found_token = true
-              if len(locks) == len(tokens):
-                break generating_token
-      if len(locks) == 1:
-        if found_token:
-          resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "token": cast[int](tokens[0]), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+                  break generating_token
         else:
-          resp Http200, $ %*{"code": 404, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "timestamp":now, "msg": encode_url("无法找到锁控板或锁")}
-      else:
-        if found_token:
+          for b in 1..8:
+            for l in 1..20:
+              t = mt.getNum mod 1000000'u32
+              if b == board:
+                for lock in locks:
+                  if l == lock:
+                    tokens.insert(t, 0)
+                    found_token = true
+                if len(locks) == len(tokens):
+                  break generating_token
+      if found_token:
+        if len(tokens) == 1:
+          if len(locks) == 1:
+            resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "token": cast[int](tokens[0]), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+          else:
+            resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "locks": locks, "tokens": tokens.mapIt(cast[int](it)), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+        else:
           resp Http200, $ %*{"code": 1, "cmd": "get-token", "boxid": @"boxid", "board": board, "locks": locks, "tokens": tokens.mapIt(cast[int](it)), "timestamp": now, "randkey": randkey.mapIt(strutils.toHex(it))}, "application/json"
+      else:
+        if len(locks) == 1:
+          resp Http200, $ %*{"code": 404, "cmd": "get-token", "boxid": @"boxid", "board": board, "lock": locks[0], "timestamp":now, "msg": encode_url("无法找到锁控板或锁")}
         else:
           resp Http200, $ %*{"code": 404, "cmd": "get-token", "boxid": @"boxid", "board": board, "locks": locks, "timestamp":now, "msg": encode_url("无法找到锁控板或锁")}
-
-
 #+end_src
 * 网络测试
 #+begin_src nim :noweb-ref ping
