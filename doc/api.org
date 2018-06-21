@@ -16,6 +16,8 @@
 <<volume-down>>
 <<light-on>>
 <<light-off>>
+<<ultraviolet-on>>
+<<ultraviolet-off>>
 <<token>>
 
 #+end_src
@@ -388,6 +390,74 @@ chargerid 的取值范围是 1 ~ 12
      Content-Type: application/json
 
      {"code":1,"cmd":"light-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+
+
+<<signature-error>>
+<<too-many-request-error>>
+<<connect-cache-error>>
+<<offline-error>>
+#+end_src
+** 紫外灯
+*** 开灯
+#+begin_src markdown :noweb-ref ultraviolet-on
+
+## 开紫外灯 [/{boxid}/ultraviolet/on]
+
+### 签名计算
+    hmac-sha1(appkey, "ultraviolet-on" + "/" + boxid + "/ultraviolet/on" + date)
+
+### 请求
+
+    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/on HTTP/1.1
+    Host: palbox.fengchaohuzhu.com
+    Content-Length: 0
+    Content-Type: application/json
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+    Date: Sat, 27 Jan 2018 09:55:00 GMT
+
+### 响应
+
+#### 开灯
+
+     HTTP/1.1 200 OK
+     Content-Length: 79
+     Content-Type: application/json
+
+     {"code":1,"cmd":"ultraviolet-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+
+
+<<signature-error>>
+<<too-many-request-error>>
+<<connect-cache-error>>
+<<offline-error>>
+#+end_src
+*** 关灯
+
+#+begin_src markdown :noweb-ref ultraviolet-off
+
+## 关紫外灯 [/{boxid}/ultraviolet/off]
+
+### 签名计算
+    hmac-sha1(appkey, "ultraviolet-off" + "/" + boxid + "/ultraviolet/off" + date)
+
+### 请求
+
+    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/off HTTP/1.1
+    Host: palbox.fengchaohuzhu.com
+    Content-Length: 0
+    Content-Type: application/json
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+    Date: Sat, 27 Jan 2018 09:55:00 GMT
+
+### 响应
+
+#### 关灯
+
+     HTTP/1.1 200 OK
+     Content-Length: 80
+     Content-Type: application/json
+
+     {"code":1,"cmd":"ultraviolet-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
 
 <<signature-error>>
