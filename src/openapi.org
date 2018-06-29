@@ -568,8 +568,8 @@
 #+end_src
 
 * 充电管理
-** 查询
-借用摄像头的 PIN。命令有效期 10 秒。
+** 查询状态
+命令有效期 10 秒。
 #+begin_src nim :noweb-ref charger-status
   get "/@boxid/chargers/@chargerid":
     check_signature(request, "charger-status" & "/"  & @"boxid" & "/chargers/" & @"chargerid"):
@@ -579,10 +579,15 @@
           pin = generate_pin(CHARGER)
           json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
+          pluggedkey = "charger-plugged." & @"boxid"
+          chargingkey = "charger-charging." & @"boxid"
+          fullkey = "charger-full." & @"boxid"
+          heatingkey = "charger-heating." & @"boxid"
+          errnokey = "charger-errno." & @"boxid"
         check_pin(@"boxid", "chager-status", pin):
           var
             countdown = 7
-            get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
+            get_result = try: redis_client.get(pluggedkey) except: redisNil
           while get_result == redisNil and countdown != 0:
             if countdown == 7:
               try:
@@ -596,14 +601,54 @@
               await sleepAsync(3)
             else:
               await sleepAsync(fib(7 - countdown) shl 10)
-            get_result = try: redis_client.get("charger-status." & @"boxid" & "." & $charger) except: redisNil
+            get_result = try: redis_client.get(pluggedkey) except: redisNil
             countdown -= 1
           if get_result == redisNil:
             resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到充电器。"), "cmd": "charger-status", "boxid": @"boxid", "charger": charger}), "application/json"
-          elif parseInt(get_result) == 0:
-            resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": false}, "application/json"
           else:
-            resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "charging": true}, "application/json"
+            var
+              pluggeds: seq[bool] = @[]
+              chargings: seq[bool] = @[]
+              fulls: seq[bool] = @[]
+              heatings: seq[bool] = @[]
+            try:
+              redis_client.multi()
+              discard redis_client.get(chargingkey)
+              discard redis_client.get(fullkey)
+              discard redis_client.get(heatingkey)
+              discard redis_client.get(errnokey)
+              var
+                result_list = redis_client.exec()
+                plugged = parseInt(get_result)
+                charging = parseInt(result_list[0])
+                full = parseInt(result_list[1])
+                heating = parseInt(result_list[2])
+                errno = parseInt(result_list[3])
+              for i in 0..3:
+                var mask = 1 shl i
+                if (mask and plugged) != 0:
+                  pluggeds.add(true)
+                else:
+                  pluggeds.add(false)
+                if (mask and charging) != 0:
+                  chargings.add(true)
+                else:
+                  chargings.add(false)
+                if (mask and full) != 0:
+                  fulls.add(true)
+                else:
+                  fulls.add(false)
+                if (mask and heating) != 0:
+                  heatings.add(true)
+                else:
+                  heatings.add(false)
+              if errno == 0:
+                resp Http200, $ %*{"code": 1, "cmd": "charger-status", "boxid": @"boxid", "charger": $charger, "plugged": pluggeds, "charging": chargings, "full": fulls, "heating": heatings}, "application/json"
+              else:
+                resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("充电器发生错误"), "boxid": @"boxid", "cmd": "charger-status", "charger": $charger, "errno": errno}), "application/json"
+            except:
+              redis_client = redis.open()
+              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "charger-status", "charger": $charger}), "application/json"
 #+end_src
 * 在线检测
 #+begin_src nim :noweb-ref online-detect
