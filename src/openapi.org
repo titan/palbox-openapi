@@ -50,6 +50,7 @@
     <<play>>
     <<volume-up>>
     <<volume-down>>
+    <<volume>>
     <<config-network>>
     <<get-token>>
     <<ping>>
@@ -186,7 +187,7 @@
             countdown -= 1
           if get_result == redisNil:
             resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到锁状态"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-          elif get_result == "0":
+          elif get_result == "1":
             resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": false, "closed": true}, "application/json"
           else:
             resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
@@ -225,7 +226,7 @@
             countdown -= 1
           if get_result == redisNil:
             resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到锁状态"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-          elif get_result == "0":
+          elif get_result == "1":
             resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": false, "closed": true}, "application/json"
           else:
             resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
@@ -270,7 +271,7 @@
             if status_get_result == redisNil:
               resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
             else:
-              resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+              resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock, "closed": if status_get_result == "1": true else: false, "opened": if status_get_result == "1": false else: true}, "application/json"
           else:
             resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
@@ -325,9 +326,26 @@
                 resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法查询到锁状态"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
             else:
               if len(locks) == 1:
-                resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+                resp Http200, $ %*{"code": 1, "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0], "closed": if status_get_result == "1": true else: false, "opened": if status_get_result == "1": false else: true}, "application/json"
               else:
-                resp Http200, $ %*{"code": 1, "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": if status_get_result == "0": true else: false, "opened": if status_get_result == "0": false else: true}, "application/json"
+                try:
+                  var
+                    closed: seq[int] = @[]
+                    opened: seq[int] = @[]
+                  redis_client.multi()
+                  for lock in locks:
+                    let key = "lock-status." & @"boxid" & "." & $board & "." & $lock
+                    discard redis_client.get(key)
+                  var multiresult = redis_client.exec()
+                  for i in 0..len(locks) - 1:
+                    if multiresult[i] == "1":
+                      closed.add(locks[i])
+                    else:
+                      opened.add(locks[i])
+                  resp Http200, $ %*{"code": 1, "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks, "closed": closed, "opened": opened}, "application/json"
+                except:
+                  redis_client = redis.open()
+                  resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
           else:
             if len(locks) == 1:
               resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
@@ -762,7 +780,7 @@ speaker 的编号与 card reader 的编号一致。
 命令有效期 10 秒。
 #+begin_src nim :noweb-ref play
   put "/@boxid/speakers/@speaker/audios/@audio":
-    check_signature(request, "play" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/audios/" & @"audio"):
+    check_signature(request, "play" & "/"  & @"boxid" & "/speakers/" & @"speaker" & "/audios/" & @"audio"):
       check_online(@"boxid"):
         let
           speaker = parseInt(@"speaker")
@@ -790,7 +808,7 @@ speaker 的编号与 card reader 的编号一致。
 命令有效期 10 秒。
 #+begin_src nim :noweb-ref volume-up
   put "/@boxid/speakers/@speaker/volume/up":
-    check_signature(request, "volume-up" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/volume/up"):
+    check_signature(request, "volume-up" & "/"  & @"boxid" & "/speakers/" & @"speaker" & "/volume/up"):
       check_online(@"boxid"):
         let
           speaker = parseInt(@"speaker")
@@ -811,13 +829,13 @@ speaker 的编号与 card reader 的编号一致。
           if okay:
             resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "volume-up", "speaker": speaker}, "application/json"
           else:
-            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-on"}), "application/json"
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "volume-up", "speaker": speaker}), "application/json"
 #+end_src
 ** 减少音量
 命令有效期 10 秒。
 #+begin_src nim :noweb-ref volume-down
   put "/@boxid/speakers/@speaker/volume/down":
-    check_signature(request, "volume-down" & "/"  & @"boxid" & "/speaker/" & @"speaker" & "/volume/down"):
+    check_signature(request, "volume-down" & "/"  & @"boxid" & "/speakers/" & @"speaker" & "/volume/down"):
       check_online(@"boxid"):
         let
           speaker = parseInt(@"speaker")
@@ -838,7 +856,35 @@ speaker 的编号与 card reader 的编号一致。
           if okay:
             resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "volume-down", "speaker": speaker}, "application/json"
           else:
-            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "light-down"}), "application/json"
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "volume-down", "speaker": speaker}), "application/json"
+#+end_src
+** 设置音量
+命令有效期 10 秒。
+#+begin_src nim :noweb-ref volume
+  put "/@boxid/speakers/@speaker/volume/@vol":
+    check_signature(request, "volume" & "/"  & @"boxid" & "/speakers/" & @"speaker" & "/volume/" & @"vol"):
+      check_online(@"boxid"):
+        let
+          speaker = parseInt(@"speaker")
+          vol = parseInt(@"vol")
+          pin = generate_pin_1(speaker)
+          json = %* {"command": "volume", "qos": "<=1", "speaker": speaker, "volume": vol, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "volume", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $json)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "boxid": @"boxid", "cmd": "volume", "speaker": speaker, "volume": vol}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "volume", "speaker": speaker, "volume": vol}), "application/json"
 #+end_src
 * NETWORK管理
 ** 配置
