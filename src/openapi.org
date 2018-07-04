@@ -234,8 +234,8 @@
 ** 开锁加锁状态
 命令有效期 10 秒。
 #+begin_src nim :noweb-ref lock-off-status
-  put "/@boxid/lock-status/@boardid/@lockid":
-    check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & "/" & @"lockid"):
+  put "/@boxid/lock-off-and-status/@boardid/@lockid":
+    check_signature(request, "lock-off-and-status" & "/"  & @"boxid" & "/lock-off-and-status/" & @"boardid" & "/" & @"lockid"):
       check_online(@"boxid"):
         let
           board = parseInt(@"boardid")
@@ -276,10 +276,10 @@
             resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁加锁状态
-开多把锁后，仅返回第一把锁的状态。 命令有效期 10 秒。
+命令有效期 10 秒。
 #+begin_src nim :noweb-ref locks-off-status
-  post "/@boxid/lock-status/@boardid":
-    check_signature(request, "lock-status" & "/"  & @"boxid" & "/lock-status/" & @"boardid" & request.body):
+  post "/@boxid/lock-off-and-status/@boardid":
+    check_signature(request, "locks-off-and-status" & "/"  & @"boxid" & "/lock-off-and-status/" & @"boardid" & request.body):
       check_online(@"boxid"):
         let
           board = parseInt(@"boardid")
@@ -1143,11 +1143,11 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
 #+begin_src nim :noweb-ref check-signature
   template check_signature(request: Request, params: string, actions: untyped): untyped =
     if request.headers.has_key("Date"):
+      let date = request.headers["Date", 0] & ", " & request.headers["Date", 1]
       if request.headers.has_key("Authorization"):
         let values = request.headers["Authorization", 0].split(':')
         if len(values) == 2:
           let
-            date = request.headers["Date", 0]
             appid = values[0]
             signature = values[1]
           if secret_tokens.has_key(appid):
@@ -1155,19 +1155,19 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
               actions
             else:
               #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-              info params, " 请求无法通过签名检查 ", hmac.to_hex(hmac_sha1(secret_tokens[appid], params & date)), " ", signature
+              info params & date, " 请求无法通过签名检查 ", hmac.to_hex(hmac_sha1(secret_tokens[appid], params & date)), " ", signature
               actions
           else:
             #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-            info params, " 请求无法通过签名检查", " invalid app-key"
+            info params & date, " 请求无法通过签名检查", " invalid app-key"
             actions
         else:
           #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-          info params, " 请求无法通过签名检查", " invalid authorization header"
+          info params & date, " 请求无法通过签名检查", " invalid authorization header"
           actions
       else:
         #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
-        info params, " 请求无法通过签名检查", " no authorization header"
+        info params & date, " 请求无法通过签名检查", " no authorization header"
         actions
     else:
       #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
