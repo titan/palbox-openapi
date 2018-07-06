@@ -10,6 +10,7 @@
 <<signature>>
 <<online-detect>>
 <<lock-off>>
+<<lock-status>>
 <<charger-status>>
 <<play>>
 <<volume-up>>
@@ -71,6 +72,8 @@ DATE 是 HTTP Header 里的 Date 字段。
 
 #+begin_src markdown :noweb-ref connect-cache-error
 
+#### 无法连接到缓存服务器
+
     HTTP/1.1 200 OK
     Content-Length: 97
     Content-Type: application/json
@@ -101,6 +104,7 @@ DATE 是 HTTP Header 里的 Date 字段。
 ## 智能柜在线状态 [/{boxid}]
 
 ### 签名计算
+
     hmac-sha1(appkey, "online-detect" + "/" + boxid + date)
 
 ### 请求
@@ -110,7 +114,7 @@ DATE 是 HTTP Header 里的 Date 字段。
     Content-Length: 0
     Content-Type: application/json
     Authorization: b87fa2e20853161eaf3742c3592492aa:e498141c858604bab512b0214c6c3f1f6d777b91
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -135,12 +139,14 @@ DATE 是 HTTP Header 里的 Date 字段。
 
 #+end_src
 
-** 开锁
+** 电控锁
+*** 开锁
 
 #+begin_src markdown :noweb-ref lock-off
 ## 开锁 [/{boxid}/locks/{boardid}]
 
 ### 签名计算
+
     hmac-sha1(appkey, "locks-off" + "/" + boxid + "/locks/" + boardid + body + date)
 
 body 是 HTTP 请求的 body。
@@ -152,7 +158,7 @@ body 是 HTTP 请求的 body。
     Content-Length: 10
     Content-Type: application/x-www-form-urlencoded
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
     locks=5,10
 
@@ -184,6 +190,76 @@ locks 要开锁的锁编号组合，可以为一把锁或两把锁。
 <<offline-error>>
 #+end_src
 
+*** 锁状态
+
+#+begin_src markdown :noweb-ref lock-status
+
+## 查询锁状态 [/{boxid}/locks/{boardid}/{locks}]
+
+### 签名计算
+
+    hmac-sha1(appkey, "lock-status" + "/" + boxid + "/locks/" + boardid + "/" + locks + date)
+
+### 请求
+
+#### 一把锁
+
+    GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1 HTTP/1.1
+    Host: palbox.fengchaohuzhu.com
+    Content-Length: 0
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:4185c44e7cf7d67dfd0acf7eb863f4005030cc37
+    Date: Fri, 06 Jul 2018 05:45:25 +0000
+
+#### 两把锁
+
+    GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1,2 HTTP/1.1
+    Host: palbox.fengchaohuzhu.com
+    Content-Length: 0
+    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:cdfe4d402c8be5b0ee6a4a6f8b48723f5048df7d
+    Date: Fri, 06 Jul 2018 04:08:27 +0000
+
+### 响应
+
+#### 一把锁
+
+    HTTP/1.1 200 OK
+    Content-Length: 124
+    Content-Type: application/json
+
+    {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1,"opened":false,"closed":true}
+
+
+#### 两把锁
+
+    HTTP/1.1 200 OK
+    Content-Length: 127
+    Content-Type: application/json
+
+    {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2],"closed":[1,2],"opened":[]}
+
+#### 无法查询锁状态(一把锁)
+
+    HTTP/1.1 200 OK
+    Content-Length: 130
+    Content-Type: application/json
+
+    {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1}
+
+
+#### 无法查询锁状态(两把锁)
+
+    HTTP/1.1 200 OK
+    Content-Length: 135
+    Content-Type: application/json
+
+    {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2]}
+
+<<signature-error>>
+<<too-many-request-error>>
+<<connect-cache-error>>
+<<offline-error>>
+#+end_src
+
 ** 充电状态
 
 #+begin_src markdown :noweb-ref charger-status
@@ -193,6 +269,7 @@ locks 要开锁的锁编号组合，可以为一把锁或两把锁。
 chargerid 的取值范围是 1 ~ 12
 
 ### 签名计算
+
     hmac-sha1(appkey, "charger-status" + "/" + boxid + "/chargers/" + chargerid + date)
 
 ### 请求
@@ -202,7 +279,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -237,6 +314,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 播放音频 [/{boxid}/speakers/{speaker}/audios/{audio}]
 
 ### 签名计算
+
     hmac-sha1(appkey, "play" + "/" + boxid + "/speakers/" + speaker + "/audios/" + audio + date)
 
 ### 请求
@@ -246,7 +324,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -271,6 +349,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 增加音量 [/{boxid}/speakers/{speaker}/volume/up]
 
 ### 签名计算
+
     hmac-sha1(appkey, "volume-up" + "/" + boxid + "/speakers/" + speaker + "/volume/up" + date)
 
 ### 请求
@@ -280,7 +359,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -298,11 +377,13 @@ chargerid 的取值范围是 1 ~ 12
 <<offline-error>>
 #+end_src
 *** 减少音量
+
 #+begin_src markdown :noweb-ref volume-down
 
 ## 减少音量 [/{boxid}/speakers/{speaker}/volume/down]
 
 ### 签名计算
+
     hmac-sha1(appkey, "volume-down" + "/" + boxid + "/speakers/" + speaker + "/volume/down" + date)
 
 ### 请求
@@ -312,7 +393,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -336,6 +417,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 开日光灯 [/{boxid}/light/on]
 
 ### 签名计算
+
     hmac-sha1(appkey, "ligh-on" + "/" + boxid + "/light/on" + date)
 
 ### 请求
@@ -345,7 +427,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -370,6 +452,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 关日光灯 [/{boxid}/light/off]
 
 ### 签名计算
+
     hmac-sha1(appkey, "ligh-off" + "/" + boxid + "/light/off" + date)
 
 ### 请求
@@ -379,7 +462,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -404,6 +487,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 开紫外灯 [/{boxid}/ultraviolet/on]
 
 ### 签名计算
+
     hmac-sha1(appkey, "ultraviolet-on" + "/" + boxid + "/ultraviolet/on" + date)
 
 ### 请求
@@ -413,7 +497,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -438,6 +522,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 关紫外灯 [/{boxid}/ultraviolet/off]
 
 ### 签名计算
+
     hmac-sha1(appkey, "ultraviolet-off" + "/" + boxid + "/ultraviolet/off" + date)
 
 ### 请求
@@ -447,7 +532,7 @@ chargerid 的取值范围是 1 ~ 12
     Content-Length: 0
     Content-Type: application/json
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 
@@ -471,6 +556,7 @@ chargerid 的取值范围是 1 ~ 12
 ## 获取 Token [/{boxid}/token/{board}/{locks}]
 
 ### 签名计算
+
     hmac-sha1(appkey, "get-token" + "/" + boxid + "/token/" + board + "/" + locks + date)
 
 ### 请求
@@ -481,7 +567,7 @@ chargerid 的取值范围是 1 ~ 12
     Host: dev.fengchaohuzhu.com
     Content-Length: 0
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:a006239e4bf1961b11d8956890b1c0e329ed44ba
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 #### 两个 Token
 
@@ -489,7 +575,7 @@ chargerid 的取值范围是 1 ~ 12
     Host: dev.fengchaohuzhu.com
     Content-Length: 0
     Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:7e0113e9eb851b2b75f10e85ef7fa6083ca103a2
-    Date: Sat, 27 Jan 2018 09:55:00 GMT
+    Date: Sat, 27 Jan 2018 09:55:00 +0000
 
 ### 响应
 

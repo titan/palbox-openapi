@@ -157,40 +157,64 @@
 结果，则返回 404 错误。命令有效期 10 秒。
 
 #+begin_src nim :noweb-ref lock-status
-  get "/@boxid/locks/@boardid/@lockid":
-    check_signature(request, "lock-status" & "/"  & @"boxid" & "/locks/" & @"boardid" & "/" & @"lockid"):
+  get "/@boxid/locks/@boardid/@locks":
+    check_signature(request, "lock-status" & "/"  & @"boxid" & "/locks/" & @"boardid" & "/" & @"locks"):
       check_online(@"boxid"):
         let
           board = parseInt(@"boardid")
-          lock = parseInt(@"lockid")
-          pin = generate_lock_pin(board, lock, 1)
-          json = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          locks = split(@"locks", ',').mapIt(parseInt(it))
+          pin = generate_lock_pin(board, 0, 1)
+          task = %*{"command": "lock-status", "board": board, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "lock-status", pin):
           var
             countdown = 7
-            get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
+            get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $locks[0]) except: redisNil
           while get_result == redisNil and countdown != 0:
             if countdown == 7:
               try:
                 redis_client.multi()
-                discard redis_client.lpush(key = tkey, value = $json)
+                discard redis_client.lpush(key = tkey, value = $task)
                 discard redis_client.expire(key = tkey, seconds = 86400)
-                discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
+                discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
                 discard redis_client.exec()
               except:
                 redis_client = redis.open()
               await sleepAsync(3000)
             else:
               await sleepAsync(fib(7 - countdown) shl 10)
-            get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $lock) except: redisNil
+            get_result = try: redis_client.get("lock-status." & @"boxid" & "." & $board & "." & $locks[0]) except: redisNil
             countdown -= 1
           if get_result == redisNil:
-            resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到锁状态"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
-          elif get_result == "1":
-            resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": false, "closed": true}, "application/json"
+            if len(locks) == 1:
+              resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到锁状态"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
+            else:
+              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
           else:
-            resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": lock, "opened": true, "closed": false}, "application/json"
+            if len(locks) == 1:
+              if get_result == "1":
+                resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": locks[0], "opened": false, "closed": true}, "application/json"
+              else:
+                resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "lock": locks[0], "opened": true, "closed": false}, "application/json"
+            else:
+              try:
+                var
+                  closed: seq[int] = @[]
+                  opened: seq[int] = @[]
+                redis_client.multi()
+                for lock in locks:
+                  let key = "lock-status." & @"boxid" & "." & $board & "." & $lock
+                  discard redis_client.get(key)
+                var multiresult = redis_client.exec()
+                for i in 0..len(locks) - 1:
+                  if multiresult[i] == "1":
+                    closed.add(locks[i])
+                  else:
+                    opened.add(locks[i])
+                resp Http200, $ %*{"code": 1, "cmd": "lock-status", "boxid": @"boxid", "board": board, "locks": locks, "closed": closed, "opened": opened}, "application/json"
+              except:
+                redis_client = redis.open()
+                resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-status", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
 #+end_src
 
 下面是兼容老版本的接口
