@@ -763,7 +763,7 @@
     check_signature(request, "config-charger" & "/"  & @"boxid" & "/chargers/" & @"chargerid" & request.body):
       check_online(@"boxid"):
         let
-          charger = parseInt(@"charger")
+          charger = parseInt(@"chargerid")
           charging = parseInt(request.params["enable-charging"])
           heating = parseInt(request.params["enable-heating"])
           pin = generate_pin(CHARGER)
