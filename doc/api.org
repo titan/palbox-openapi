@@ -99,502 +99,502 @@ DATE 是 HTTP Header 里的 Date 字段。
 
 ** 在线检测
 
-#+begin_src markdown :noweb-ref online-detect
+#+begin_src markdown :noweb-ref online-detect :noweb yes
 
-## 智能柜在线状态 [/{boxid}]
+  ## 智能柜在线状态 [/{boxid}]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "online-detect" + "/" + boxid + date)
+      hmac-sha1(appkey, "online-detect" + "/" + boxid + date)
 
-### 请求
+  ### 请求
 
-    GET /31-FF-D6-05-48-54-34-39-23-86-18-43 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: b87fa2e20853161eaf3742c3592492aa:e498141c858604bab512b0214c6c3f1f6d777b91
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      GET /31-FF-D6-05-48-54-34-39-23-86-18-43 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: b87fa2e20853161eaf3742c3592492aa:e498141c858604bab512b0214c6c3f1f6d777b91
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 在线
+  #### 在线
 
-    HTTP/1.1 200 OK
-    Content-Length: 92
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 92
+      Content-Type: application/json
 
-    {"code":1,"cmd":"online-detect","boxid":"31-FF-D6-05-48-54-34-39-23-86-18-43","online":true}
+      {"code":1,"cmd":"online-detect","boxid":"31-FF-D6-05-48-54-34-39-23-86-18-43","online":true}
 
-#### 离线
+  #### 离线
 
-    HTTP/1.1 200 OK
-    Content-Length: 93
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 93
+      Content-Type: application/json
 
-    {"code":1,"cmd":"online-detect","boxid":"31-FF-D6-05-48-54-34-39-23-86-18-43","offline":true}
+      {"code":1,"cmd":"online-detect","boxid":"31-FF-D6-05-48-54-34-39-23-86-18-43","offline":true}
 
-<<signature-error>>
-<<too-many-request-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
 
 #+end_src
 
 ** 电控锁
 *** 开锁
 
-#+begin_src markdown :noweb-ref lock-off
-## 开锁 [/{boxid}/locks/{boardid}]
+#+begin_src markdown :noweb-ref lock-off :noweb yes
+  ## 开锁 [/{boxid}/locks/{boardid}]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "locks-off" + "/" + boxid + "/locks/" + boardid + body + date)
+      hmac-sha1(appkey, "locks-off" + "/" + boxid + "/locks/" + boardid + body + date)
 
-body 是 HTTP 请求的 body。
+  body 是 HTTP 请求的 body。
 
-### 请求
+  ### 请求
 
-    POST /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/8 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 10
-    Content-Type: application/x-www-form-urlencoded
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      POST /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/8 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 10
+      Content-Type: application/x-www-form-urlencoded
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-    locks=5,10
+      locks=5,10
 
-参数：
+  参数：
 
-locks 要开锁的锁编号组合，可以为一把锁或两把锁。
+  locks 要开锁的锁编号组合，可以为一把锁或两把锁。
 
-### 响应
+  ### 响应
 
-#### 开一把锁
+  #### 开一把锁
 
-    HTTP/1.1 200 OK
-    Content-Length: 103
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 103
+      Content-Type: application/json
 
-    {"code":1,"msg":"OK","cmd":"lock-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":8,"lock":5}
+      {"code":1,"msg":"OK","cmd":"lock-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":8,"lock":5}
 
-#### 开两把锁
+  #### 开两把锁
 
-    HTTP/1.1 200 OK
-    Content-Length: 110
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 110
+      Content-Type: application/json
 
-    {"code":1,"msg":"OK","cmd":"locks-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":8,"locks":[5,10]}
+      {"code":1,"msg":"OK","cmd":"locks-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":8,"locks":[5,10]}
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 
 *** 锁状态
 
-#+begin_src markdown :noweb-ref lock-status
+#+begin_src markdown :noweb-ref lock-status :noweb yes
 
-## 查询锁状态 [/{boxid}/locks/{boardid}/{locks}]
+  ## 查询锁状态 [/{boxid}/locks/{boardid}/{locks}]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "lock-status" + "/" + boxid + "/locks/" + boardid + "/" + locks + date)
+      hmac-sha1(appkey, "lock-status" + "/" + boxid + "/locks/" + boardid + "/" + locks + date)
 
-### 请求
+  ### 请求
 
-#### 一把锁
+  #### 一把锁
 
-    GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:4185c44e7cf7d67dfd0acf7eb863f4005030cc37
-    Date: Fri, 06 Jul 2018 05:45:25 +0000
+      GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:4185c44e7cf7d67dfd0acf7eb863f4005030cc37
+      Date: Fri, 06 Jul 2018 05:45:25 +0000
 
-#### 两把锁
+  #### 两把锁
 
-    GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1,2 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:cdfe4d402c8be5b0ee6a4a6f8b48723f5048df7d
-    Date: Fri, 06 Jul 2018 04:08:27 +0000
+      GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/locks/1/1,2 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:cdfe4d402c8be5b0ee6a4a6f8b48723f5048df7d
+      Date: Fri, 06 Jul 2018 04:08:27 +0000
 
-### 响应
+  ### 响应
 
-#### 一把锁
+  #### 一把锁
 
-    HTTP/1.1 200 OK
-    Content-Length: 124
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 124
+      Content-Type: application/json
 
-    {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1,"opened":false,"closed":true}
-
-
-#### 两把锁
-
-    HTTP/1.1 200 OK
-    Content-Length: 127
-    Content-Type: application/json
-
-    {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2],"closed":[1,2],"opened":[]}
-
-#### 无法查询锁状态(一把锁)
-
-    HTTP/1.1 200 OK
-    Content-Length: 130
-    Content-Type: application/json
-
-    {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1}
+      {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1,"opened":false,"closed":true}
 
 
-#### 无法查询锁状态(两把锁)
+  #### 两把锁
 
-    HTTP/1.1 200 OK
-    Content-Length: 135
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 127
+      Content-Type: application/json
 
-    {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2]}
+      {"code":1,"cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2],"closed":[1,2],"opened":[]}
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  #### 无法查询锁状态(一把锁)
+
+      HTTP/1.1 200 OK
+      Content-Length: 130
+      Content-Type: application/json
+
+      {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"lock":1}
+
+
+  #### 无法查询锁状态(两把锁)
+
+      HTTP/1.1 200 OK
+      Content-Length: 135
+      Content-Type: application/json
+
+      {"code":404,"msg":"无法获取到锁状态","cmd":"lock-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":1,"locks":[1,2]}
+
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 
 ** 充电状态
 
-#+begin_src markdown :noweb-ref charger-status
+#+begin_src markdown :noweb-ref charger-status :noweb yes
 
-## 获取充电状态 [/{boxid}/chargers/{chargerid}]
+  ## 获取充电状态 [/{boxid}/chargers/{chargerid}]
 
-chargerid 的取值范围是 1 ~ 12
+  chargerid 的取值范围是 1 ~ 12
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "charger-status" + "/" + boxid + "/chargers/" + chargerid + date)
+      hmac-sha1(appkey, "charger-status" + "/" + boxid + "/chargers/" + chargerid + date)
 
-### 请求
+  ### 请求
 
-    GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/chargers/1 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      GET /34-FF-D7-05-4D-42-37-39-31-90-07-43/chargers/1 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 充电结果
+  #### 充电结果
 
-     HTTP/1.1 200 OK
-     Content-Length: 107
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 107
+       Content-Type: application/json
 
-     {"code":1,"cmd":"charger-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","charger":0,"charging":true}
+       {"code":1,"cmd":"charger-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","charger":0,"charging":true}
 
-#### 无法查询到充电器
+  #### 无法查询到充电器
 
-     HTTP/1.1 200 OK
-     Content-Length: 130
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 130
+       Content-Type: application/json
 
-     {"code":404,"msg":"无法查询到充电器。","cmd":"charger-status","boxid":"31-FF-DB-05-48-54-34-39-31-61-18-43","charger":0,}
+       {"code":404,"msg":"无法查询到充电器。","cmd":"charger-status","boxid":"31-FF-DB-05-48-54-34-39-31-61-18-43","charger":0,}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<offline-error>>
 #+end_src
 
 ** 音频
 
 *** 播放
 
-#+begin_src markdown :noweb-ref play
+#+begin_src markdown :noweb-ref play :noweb yes
 
-## 播放音频 [/{boxid}/speakers/{speaker}/audios/{audio}]
+  ## 播放音频 [/{boxid}/speakers/{speaker}/audios/{audio}]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "play" + "/" + boxid + "/speakers/" + speaker + "/audios/" + audio + date)
+      hmac-sha1(appkey, "play" + "/" + boxid + "/speakers/" + speaker + "/audios/" + audio + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/audios/1001 HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/audios/1001 HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 播放
+  #### 播放
 
-     HTTP/1.1 200 OK
-     Content-Length: 48
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 48
+       Content-Type: application/json
 
-     {"code":1,"cmd":"play","speaker":1,"audio":1001}
+       {"code":1,"cmd":"play","speaker":1,"audio":1001}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 
 *** 增加音量
-#+begin_src markdown :noweb-ref volume-up
+#+begin_src markdown :noweb-ref volume-up :noweb yes
 
-## 增加音量 [/{boxid}/speakers/{speaker}/volume/up]
+  ## 增加音量 [/{boxid}/speakers/{speaker}/volume/up]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "volume-up" + "/" + boxid + "/speakers/" + speaker + "/volume/up" + date)
+      hmac-sha1(appkey, "volume-up" + "/" + boxid + "/speakers/" + speaker + "/volume/up" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/volume/up HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/volume/up HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 成功
+  #### 成功
 
-     HTTP/1.1 200 OK
-     Content-Length: 86
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 86
+       Content-Type: application/json
 
-     {"code":1,"cmd":"volume-up","speaker":1,"boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"volume-up","speaker":1,"boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 *** 减少音量
 
-#+begin_src markdown :noweb-ref volume-down
+#+begin_src markdown :noweb-ref volume-down :noweb yes
 
-## 减少音量 [/{boxid}/speakers/{speaker}/volume/down]
+  ## 减少音量 [/{boxid}/speakers/{speaker}/volume/down]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "volume-down" + "/" + boxid + "/speakers/" + speaker + "/volume/down" + date)
+      hmac-sha1(appkey, "volume-down" + "/" + boxid + "/speakers/" + speaker + "/volume/down" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/volume/down HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/speakers/1/volume/down HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 成功
+  #### 成功
 
-     HTTP/1.1 200 OK
-     Content-Length: 88
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 88
+       Content-Type: application/json
 
-     {"code":1,"cmd":"volume-down","speaker":1,"boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"volume-down","speaker":1,"boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 ** 灯光
 *** 开灯
-#+begin_src markdown :noweb-ref light-on
+  #+begin_src markdown :noweb-ref light-on :noweb yes
 
-## 开日光灯 [/{boxid}/light/on]
+  ## 开日光灯 [/{boxid}/light/on]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "ligh-on" + "/" + boxid + "/light/on" + date)
+      hmac-sha1(appkey, "ligh-on" + "/" + boxid + "/light/on" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/light/on HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/light/on HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 开灯
+  #### 开灯
 
-     HTTP/1.1 200 OK
-     Content-Length: 73
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 73
+       Content-Type: application/json
 
-     {"code":1,"cmd":"light-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"light-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 *** 关灯
 
-#+begin_src markdown :noweb-ref light-off
+#+begin_src markdown :noweb-ref light-off :noweb yes
 
-## 关日光灯 [/{boxid}/light/off]
+  ## 关日光灯 [/{boxid}/light/off]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "ligh-off" + "/" + boxid + "/light/off" + date)
+      hmac-sha1(appkey, "ligh-off" + "/" + boxid + "/light/off" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/light/off HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/light/off HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 关灯
+  #### 关灯
 
-     HTTP/1.1 200 OK
-     Content-Length: 74
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 74
+       Content-Type: application/json
 
-     {"code":1,"cmd":"light-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"light-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 ** 紫外灯
 *** 开灯
-#+begin_src markdown :noweb-ref ultraviolet-on
+#+begin_src markdown :noweb-ref ultraviolet-on :noweb yes
 
-## 开紫外灯 [/{boxid}/ultraviolet/on]
+  ## 开紫外灯 [/{boxid}/ultraviolet/on]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "ultraviolet-on" + "/" + boxid + "/ultraviolet/on" + date)
+      hmac-sha1(appkey, "ultraviolet-on" + "/" + boxid + "/ultraviolet/on" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/on HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/on HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 开灯
+  #### 开灯
 
-     HTTP/1.1 200 OK
-     Content-Length: 79
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 79
+       Content-Type: application/json
 
-     {"code":1,"cmd":"ultraviolet-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"ultraviolet-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 *** 关灯
 
-#+begin_src markdown :noweb-ref ultraviolet-off
+#+begin_src markdown :noweb-ref ultraviolet-off :noweb yes
 
-## 关紫外灯 [/{boxid}/ultraviolet/off]
+  ## 关紫外灯 [/{boxid}/ultraviolet/off]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "ultraviolet-off" + "/" + boxid + "/ultraviolet/off" + date)
+      hmac-sha1(appkey, "ultraviolet-off" + "/" + boxid + "/ultraviolet/off" + date)
 
-### 请求
+  ### 请求
 
-    PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/off HTTP/1.1
-    Host: palbox.fengchaohuzhu.com
-    Content-Length: 0
-    Content-Type: application/json
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/ultraviolet/off HTTP/1.1
+      Host: palbox.fengchaohuzhu.com
+      Content-Length: 0
+      Content-Type: application/json
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:10b688a95f012a81dc4fda9d5ef9bccf898154f4
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 关灯
+  #### 关灯
 
-     HTTP/1.1 200 OK
-     Content-Length: 80
-     Content-Type: application/json
+       HTTP/1.1 200 OK
+       Content-Length: 80
+       Content-Type: application/json
 
-     {"code":1,"cmd":"ultraviolet-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
+       {"code":1,"cmd":"ultraviolet-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43"}
 
 
-<<signature-error>>
-<<too-many-request-error>>
-<<connect-cache-error>>
-<<offline-error>>
+  <<signature-error>>
+  <<too-many-request-error>>
+  <<connect-cache-error>>
+  <<offline-error>>
 #+end_src
 ** Token
 
-#+begin_src markdown :noweb-ref token
-## 获取 Token [/{boxid}/token/{board}/{locks}]
+#+begin_src markdown :noweb-ref token :noweb yes
+  ## 获取 Token [/{boxid}/token/{board}/{locks}]
 
-### 签名计算
+  ### 签名计算
 
-    hmac-sha1(appkey, "get-token" + "/" + boxid + "/token/" + board + "/" + locks + date)
+      hmac-sha1(appkey, "get-token" + "/" + boxid + "/token/" + board + "/" + locks + date)
 
-### 请求
+  ### 请求
 
-#### 一个 Token
+  #### 一个 Token
 
-    GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11 HTTP/1.1
-    Host: dev.fengchaohuzhu.com
-    Content-Length: 0
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:a006239e4bf1961b11d8956890b1c0e329ed44ba
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11 HTTP/1.1
+      Host: dev.fengchaohuzhu.com
+      Content-Length: 0
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:a006239e4bf1961b11d8956890b1c0e329ed44ba
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-#### 两个 Token
+  #### 两个 Token
 
-    GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11,12 HTTP/1.1
-    Host: dev.fengchaohuzhu.com
-    Content-Length: 0
-    Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:7e0113e9eb851b2b75f10e85ef7fa6083ca103a2
-    Date: Sat, 27 Jan 2018 09:55:00 +0000
+      GET /32-FF-D7-05-52-48-37-33-39-75-07-51/token/1/11,12 HTTP/1.1
+      Host: dev.fengchaohuzhu.com
+      Content-Length: 0
+      Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:7e0113e9eb851b2b75f10e85ef7fa6083ca103a2
+      Date: Sat, 27 Jan 2018 09:55:00 +0000
 
-### 响应
+  ### 响应
 
-#### 一个 Token
+  #### 一个 Token
 
-    HTTP/1.1 200 OK
-    Content-Length: 188
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 188
+      Content-Type: application/json
 
-    {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"lock":11,"token":731107,"timestamp":1524795868,"randkey":["05D7FF32","33374852","51077539","0183C690"]}
+      {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"lock":11,"token":731107,"timestamp":1524795868,"randkey":["05D7FF32","33374852","51077539","0183C690"]}
 
-#### 两个 Token
+  #### 两个 Token
 
-    HTTP/1.1 200 OK
-    Content-Length: 204
-    Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 204
+      Content-Type: application/json
 
-    {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"locks":[11,12],"tokens":[442333,391307],"timestamp":1524817420,"randkey":["05D7FF32","33374852","51077539","0183C7F7"]}
+      {"code":1,"cmd":"get-token","boxid":"32-FF-D7-05-52-48-37-33-39-75-07-51","board":1,"locks":[11,12],"tokens":[442333,391307],"timestamp":1524817420,"randkey":["05D7FF32","33374852","51077539","0183C7F7"]}
 
 
-<<signature-error>>
+  <<signature-error>>
 #+end_src
