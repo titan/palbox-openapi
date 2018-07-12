@@ -703,8 +703,8 @@
       check_online(@"boxid"):
         let
           charger = parseInt(@"chargerid")
-          chargingkey = "charger-config." & @"boxid" & "." & $charger & ".enable-charging"
-          heatingkey = "charger-config." & @"boxid" & "." & $charger & ".enable-heating"
+          chargingkey = "charger-config.enable-charging." & @"boxid" & "." & $charger
+          heatingkey = "charger-config.enable-heating." & @"boxid" & "." & $charger
           get_result = try: redis_client.get(chargingkey) except: redisNil
         if get_result == redisNil:
           let
