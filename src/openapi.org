@@ -623,11 +623,11 @@
           pin = generate_pin(CHARGER)
           json = %*{"command": "charger-status", "charger": charger, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
-          pluggedkey = "charger-plugged." & @"boxid"
-          chargingkey = "charger-charging." & @"boxid"
-          fullkey = "charger-full." & @"boxid"
-          heatingkey = "charger-heating." & @"boxid"
-          errnokey = "charger-errno." & @"boxid"
+          pluggedkey = "charger-plugged." & @"boxid" & "." & $charger
+          chargingkey = "charger-charging." & @"boxid" & "." & $charger
+          fullkey = "charger-full." & @"boxid" & "." & $charger
+          heatingkey = "charger-heating." & @"boxid" & "." & $charger
+          errnokey = "charger-errno." & @"boxid" & "." & $charger
         check_pin(@"boxid", "chager-status", pin):
           var
             countdown = 7
