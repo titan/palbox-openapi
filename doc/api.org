@@ -266,7 +266,7 @@ DATE 是 HTTP Header 里的 Date 字段。
 
   ## 获取充电状态 [/{boxid}/chargers/{chargerid}]
 
-  chargerid 的取值范围是 1 ~ 12
+  chargerid 的取值范围是 1 ~ 8
 
   ### 签名计算
 
@@ -285,11 +285,23 @@ DATE 是 HTTP Header 里的 Date 字段。
 
   #### 充电结果
 
-       HTTP/1.1 200 OK
-       Content-Length: 107
-       Content-Type: application/json
+      HTTP/1.1 200 OK
+      Content-Length: 232
+      Content-Type: application/json
 
-       {"code":1,"cmd":"charger-status","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","charger":0,"charging":true}
+      {"code":1,"cmd":"charger-status","boxid":"34-FF-9F-8D-31-50-31-38-09-76-02-57","charger":"1","plugged":[true,true,true,false],"charging":[false,false,false,false],"full":[false,false,false,false],"heating":[false,false,false,false]}
+
+  结果说明：
+
+  1. plugged 是充电接头插入标志。
+
+  2. charging 是充电标志。
+
+  3. full 是充满标志。
+
+  4. heating 是加热标志。
+
+  每个充电器有 4 路插头，因此结果是长度为 4 的数组。
 
   #### 无法查询到充电器
 
