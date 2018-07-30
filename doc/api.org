@@ -20,6 +20,11 @@
 <<ultraviolet-on>>
 <<ultraviolet-off>>
 <<token>>
+<<egg-lock-off>>
+<<egg-lock-on>>
+<<egg-play>>
+<<egg-volume>>
+<<egg-gpio>>
 
 #+end_src
 
@@ -609,4 +614,181 @@ DATE 是 HTTP Header 里的 Date 字段。
 
 
   <<signature-error>>
+#+end_src
+** 扭蛋机
+*** 开锁
+  #+begin_src markdown :noweb-ref egg-lock-off :noweb yes
+    ## 扭蛋机开锁 [/{boxid}/eggs/{eggid}/{cabin}/off]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "egg-lock-off" + "/" + boxid + "/eggs/" + eggid + "/" + cabin + "/off" + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | eggid | int  | 1~8  |
+    | cabin | int  | 1~16 |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/eggs/1/1/off HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:79ec6049444e1a202cc770fca75ed361fb690eec
+        Date: Mon, 30 Jul 2018 02:12:11 +0000
+
+    ### 响应
+
+    #### 开锁
+
+         HTTP/1.1 200 OK
+         Content-Length: 99
+         Content-Type: application/json
+
+         {"code":1,"cmd":"egg-lock-off","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","cabin":"1"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+*** 关锁
+  #+begin_src markdown :noweb-ref egg-lock-on :noweb yes
+    ## 扭蛋机关锁 [/{boxid}/eggs/{eggid}/{cabin}/on]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "egg-lock-on" + "/" + boxid + "/eggs/" + eggid + "/" + cabin + "/on" + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | eggid | int  | 1~8  |
+    | cabin | int  | 1~16 |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/eggs/1/1/on HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:f2415fb49197613f9ab9b28e265d16605415753c
+        Date: Mon, 30 Jul 2018 06:41:12 +0000
+
+    ### 响应
+
+    #### 关锁
+
+
+         HTTP/1.1 200 OK
+         Content-Length: 98
+         Content-Type: application/json
+
+         {"code":1,"cmd":"egg-lock-on","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","cabin":"1"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+*** 播放
+  #+begin_src markdown :noweb-ref egg-play :noweb yes
+    ## 扭蛋机播放 [/{boxid}/eggs/{eggid}/audios/{audio}]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "egg-play" + "/" + boxid + "/eggs/" + eggid + "/audios/" + audio + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围   |
+    | eggid | int  | 1~8    |
+    | audio | int  | 1~9999 |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/eggs/1/audios/1 HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:c5f6e5b5a5c7c7ce378170e7f559d5ebdba3a3f1
+        Date: Mon, 30 Jul 2018 06:57:11 +0000
+
+    ### 响应
+
+    #### 播放
+
+         HTTP/1.1 200 OK
+         Content-Length: 95
+         Content-Type: application/json
+
+         {"code":1,"cmd":"egg-play","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","audio":"1"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+*** 音量
+  #+begin_src markdown :noweb-ref egg-volume :noweb yes
+    ## 扭蛋机设置音量 [/{boxid}/eggs/{eggid}/volume/{vol}]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "egg-volume" + "/" + boxid + "/eggs/" + eggid + "/volume/" + vol + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | eggid | int  | 1~8  |
+    | vol   | int  | 0~31 |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/eggs/1/volume/15 HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:1f885b7c2ce76f26cdfecd4200bdcb46d7045ef5
+        Date: Mon, 30 Jul 2018 07:05:07 +0000
+
+    ### 响应
+
+    #### 调节音量
+
+         HTTP/1.1 200 OK
+         Content-Length: 99
+         Content-Type: application/json
+
+         {"code":1,"cmd":"egg-volume","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","volume":"15"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+*** GPIO
+  #+begin_src markdown :noweb-ref egg-gpio :noweb yes
+    ## 扭蛋机设置 GPIO [/{boxid}/eggs/{eggid}/gpio/{gpio}]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "egg-volume" + "/" + boxid + "/eggs/" + eggid + "/gpio/" + gpio + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | eggid | int  | 1~8  |
+    | gpio  | int  | 0~15 |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/eggs/1/gpio/15 HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:5d78dc10bae6b8e6991ca6597e18a3257f933bde
+        Date: Mon, 30 Jul 2018 07:08:22 +0000
+
+    ### 响应
+
+    #### 设置 GPIO
+
+         HTTP/1.1 200 OK
+         Content-Length: 95
+         Content-Type: application/json
+
+         {"code":1,"cmd":"egg-gpio","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","gpio":"15"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
 #+end_src
