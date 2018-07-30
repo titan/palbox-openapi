@@ -54,6 +54,11 @@
     <<config-network>>
     <<get-token>>
     <<ping>>
+    <<egg-lock-off>>
+    <<egg-lock-on>>
+    <<egg-play>>
+    <<egg-gpio>>
+    <<egg-volume>>
 
   runforever()
 #+end_src
@@ -1034,6 +1039,146 @@ speaker 的编号与 card reader 的编号一致。
       else:
         resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "ping"}), "application/json"
 #+end_src
+* 扭蛋管理
+** 开锁
+#+begin_src nim :noweb-ref egg-lock-off
+  put "/@boxid/eggs/@eggid/@cabin/off":
+    check_signature(request, "egg-lock-off" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/" & @"cabin" & "/off"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          cabin = parseInt(@"cabin")
+          pin = generate_lock_pin(egg, cabin, 0)
+          task = %*{"command": "egg-lock-off", "egg": egg, "cabin": cabin, "qos": ">=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "egg-lock-off", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "egg-lock-off", "boxid": @"boxid", "egg": $egg, "cabin": $cabin}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "egg-lock-off", "egg": $egg, "cabin": $cabin}), "application/json"
+#+end_src
+** 关锁
+#+begin_src nim :noweb-ref egg-lock-on
+  put "/@boxid/eggs/@eggid/@cabin/on":
+    check_signature(request, "egg-lock-on" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/" & @"cabin" & "/on"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          cabin = parseInt(@"cabin")
+          pin = generate_lock_pin(egg, cabin, 1)
+          task = %*{"command": "egg-lock-on", "egg": egg, "cabin": cabin, "qos": ">=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "egg-lock-on", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "egg-lock-on", "boxid": @"boxid", "egg": $egg, "cabin": $cabin}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "egg-lock-on", "egg": $egg, "cabin": $cabin}), "application/json"
+
+#+end_src
+** 播放
+#+begin_src nim :noweb-ref egg-play
+  put "/@boxid/eggs/@eggid/audios/@audio":
+    check_signature(request, "egg-play" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/audios/" & @"audio"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          audio = parseInt(@"audio")
+          pin = generate_lock_pin(egg, 0, 2)
+          task = %*{"command": "egg-play", "egg": egg, "audio": audio, "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "egg-play", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "egg-play", "boxid": @"boxid", "egg": $egg, "audio": $audio}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "egg-play", "egg": $egg, "audio": $audio}), "application/json"
+
+#+end_src
+** GPIO 控制
+#+begin_src nim :noweb-ref egg-gpio
+  put "/@boxid/eggs/@eggid/gpio/@gpio":
+    check_signature(request, "egg-gpio" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/gpio/" & @"gpio"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          gpio = parseInt(@"gpio")
+          pin = generate_lock_pin(egg, 0, 3)
+          task = %*{"command": "egg-gpio", "egg": egg, "gpio": gpio, "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "egg-gpio", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "egg-gpio", "boxid": @"boxid", "egg": $egg, "gpio": $gpio}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "egg-gpio", "egg": $egg, "gpio": $gpio}), "application/json"
+
+#+end_src
+
+** 音量调节
+#+begin_src nim :noweb-ref egg-volume
+  put "/@boxid/eggs/@eggid/volume/@vol":
+    check_signature(request, "egg-volume" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/volume/" & @"vol"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          vol = parseInt(@"vol")
+          pin = generate_lock_pin(egg, 0, 5)
+          task = %*{"command": "egg-volume", "egg": egg, "volume": vol, "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+        check_pin(@"boxid", "egg-volume", pin):
+          var okay = false
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+            okay = true
+          except:
+            redis_client = redis.open()
+          if okay:
+            resp Http200, $ %*{"code": 1, "cmd": "egg-volume", "boxid": @"boxid", "egg": $egg, "volume": $vol}, "application/json"
+          else:
+            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "boxid": @"boxid", "cmd": "egg-volume", "egg": $egg, "volume": $vol}), "application/json"
+#+end_src
 * MT19937
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapipkg/mt19937.nim
   type
@@ -1166,6 +1311,7 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
 
 #+begin_src nim :noweb-ref check-signature
   template check_signature(request: Request, params: string, actions: untyped): untyped =
+    info params
     if request.headers.has_key("Date"):
       let date = request.headers["Date", 0] & ", " & request.headers["Date", 1]
       if request.headers.has_key("Authorization"):
