@@ -60,6 +60,7 @@
     <<egg-play>>
     <<egg-gpio>>
     <<egg-volume>>
+    <<egg-query>>
 
   runforever()
 #+end_src
@@ -94,7 +95,6 @@
           pin = generate_lock_pin(board, lock, 0)
           json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
-          dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "lock-off", pin):
           var okay = false
@@ -102,7 +102,7 @@
             redis_client.multi()
             discard redis_client.lpush(key = tkey, value = $json)
             discard redis_client.expire(key = tkey, seconds = 86400)
-            discard redis_client.del(@[skey, dkey])
+            discard redis_client.del(@[skey])
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
             discard redis_client.exec()
             okay = true
@@ -1161,7 +1161,7 @@ speaker 的编号与 card reader 的编号一致。
         let
           egg = parseInt(@"eggid")
           vol = parseInt(@"vol")
-          pin = generate_lock_pin(egg, 0, 5)
+          pin = generate_lock_pin(egg, 0, 4)
           task = %*{"command": "egg-volume", "egg": egg, "volume": vol, "qos": "<=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
           ackkey = "egg-volume-ack." & @"boxid" & "." & $pin
@@ -1179,6 +1179,34 @@ speaker 的编号与 card reader 的编号一致。
               resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到扭蛋机"), "boxid": @"boxid", "cmd": "egg-volume", "egg": $egg, "volume": $vol}), "application/json"
             else:
               resp Http200, $ %*{"code": 1, "cmd": "egg-volume", "boxid": @"boxid", "egg": $egg, "volume": $vol}, "application/json"
+#+end_src
+** 查询状态
+#+begin_src nim :noweb-ref egg-query
+  get "/@boxid/eggs/@eggid/@cabin":
+    check_signature(request, "egg-query" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/" & @"cabin"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          cabin = parseInt(@"cabin")
+          pin = generate_lock_pin(egg, cabin, 5)
+          task = %*{"command": "egg-query", "egg": egg, "cabin": cabin, "qos": ">=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+          ackkey = "egg-busy." & @"boxid" & "." & $egg & "." & $cabin
+        check_pin(@"boxid", "egg-query", pin):
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.del(@[ackkey])
+            discard redis_client.exec()
+          except:
+            redis_client = redis.open()
+          loop_check_cache(ackkey, cache_result):
+            if cache_result == redisNil:
+              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到扭蛋机"), "boxid": @"boxid", "cmd": "egg-query", "egg": $egg, "cabin": $cabin}), "application/json"
+            else:
+              resp Http200, $ %*{"code": 1, "cmd": "egg-query", "boxid": @"boxid", "egg": $egg, "cabin": $cabin, "busy": if cache_result == "1": true else: false}, "application/json"
 #+end_src
 * MT19937
 #+begin_src nim :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/src/openapipkg/mt19937.nim
