@@ -96,6 +96,7 @@
           json = %*{"command": "lock-off", "board": board, "lock": lock, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
           tkey = "tasks." & @"boxid"
+          ackkey = "lock-off-ack." & @"boxid" & "." & $pin
         check_pin(@"boxid", "lock-off", pin):
           var okay = false
           try:
@@ -108,10 +109,11 @@
             okay = true
           except:
             redis_client = redis.open()
-          if okay:
-            resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
-          else:
-            resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
+          loop_check_cache(ackkey, cache_result):
+            if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
+              resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+            else:
+              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
 #+end_src
 ** 开多把锁
 命令有效期 10 秒。
@@ -126,8 +128,9 @@
           json = if len(pins) == 1:
                    %*{"command": "lock-off", "board": board, "lock": locks[0], "expires-at": epochTime().toInt() + 10, "pin": pins[0], "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
                  else:
-                   %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 10, "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+                   %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 10, "pin": pins[0], "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
+          ackkey = "locks-off-ack." & @"boxid" & "." & $pins[0]
         check_pins(@"boxid", "locks-off", pins):
           var okay = false
           try:
@@ -146,15 +149,17 @@
           except:
             redis_client = redis.open()
           if len(pins) == 1:
-            if okay:
-              resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}, "application/json"
-            else:
-              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
+            loop_check_cache(ackkey, cache_result):
+              if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
+                resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}, "application/json"
+              else:
+                resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
           else:
-            if okay:
-              resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
-            else:
-              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
+            loop_check_cache(ackkey, cache_result):
+              if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
+                resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+              else:
+                resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
 #+end_src
 ** 锁状态
 
