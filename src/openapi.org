@@ -130,7 +130,7 @@
                  else:
                    %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 10, "pin": pins[0], "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
-          ackkey = "locks-off-ack." & @"boxid" & "." & $pins[0]
+          ackkey = if len(pins) == 1: "lock-off-ack." & @"boxid" & "." & $pins[0] else: "locks-off-ack." & @"boxid" & "." & $pins[0]
         check_pins(@"boxid", "locks-off", pins):
           var okay = false
           try:
@@ -709,8 +709,10 @@
                   discard redis_client.expire(key = tkey, seconds = 86400)
                   discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
                   discard redis_client.exec()
-                except:
+                except IOError:
                   redis_client = redis.open()
+                except:
+                  discard
                 await sleepAsync(3)
               else:
                 await sleepAsync(fib(7 - countdown) shl 10)
@@ -720,26 +722,40 @@
               resp Http200, decode_url($ %*{"code": 404, "msg": encode_url("无法获取到充电器配置"), "cmd": "charger-config", "boxid": @"boxid", "charger": charger}), "application/json"
             else:
               let
-                charging = if parseInt(get_result) == 1: true else: false
-                heating = try:
-                            if parseInt(redis_client.get(heatingkey)) == 1:
-                              true
-                            else:
-                              false
-                          except:
-                            false
-              resp Http200, $ %*{"code": 1, "cmd": "charger-config", "boxid": @"boxid", "charger": charger, "enable-charging": charging, "eanble-heating": heating}, "application/json"
+                charging_value = parseInt(get_result)
+                heating_result = try: redis_client.get(heatingkey) except: redisNil
+                heating_value = if heating_result != redisNil: parseInt(heating_result) else: 0
+              var
+                chargings: seq[bool] = @[]
+                heatings: seq[bool] = @[]
+              for i in 0..3:
+                if (charging_value and (1 shl i)) == 0:
+                  chargings.add(false)
+                else:
+                  chargings.add(true)
+                if (heating_value and (1 shl i)) == 0:
+                  heatings.add(false)
+                else:
+                  heatings.add(true)
+              resp Http200, $ %*{"code": 1, "cmd": "charger-config", "boxid": @"boxid", "charger": charger, "enable-charging": chargings, "eanble-heating": heatings}, "application/json"
         else:
           let
-            charging = if parseInt(get_result) == 1: true else: false
-            heating = try:
-                        if parseInt(redis_client.get(heatingkey)) == 1:
-                          true
-                        else:
-                          false
-                      except:
-                        false
-          resp Http200, $ %*{"code": 1, "cmd": "charger-config", "boxid": @"boxid", "charger": charger, "enable-charging": charging, "eanble-heating": heating}, "application/json"
+            charging_value = parseInt(get_result)
+            heating_result = try: redis_client.get(heatingkey) except: redisNil
+            heating_value = if heating_result != redisNil: parseInt(heating_result) else: 0
+          var
+            chargings: seq[bool] = @[]
+            heatings: seq[bool] = @[]
+          for i in 0..3:
+            if (charging_value and (1 shl i)) == 0:
+              chargings.add(false)
+            else:
+              chargings.add(true)
+            if (heating_value and (1 shl i)) == 0:
+              heatings.add(false)
+            else:
+              heatings.add(true)
+          resp Http200, $ %*{"code": 1, "cmd": "charger-config", "boxid": @"boxid", "charger": charger, "enable-charging": chargings, "eanble-heating": heatings}, "application/json"
 #+end_src
 ** 修改配置
 命令有效期 10 秒。
@@ -752,6 +768,8 @@
           charger = parseInt(@"chargerid")
           charging = parseInt(request.params["enable-charging"])
           heating = parseInt(request.params["enable-heating"])
+          chargingkey = "charger-config.enable-charging." & @"boxid" & "." & $charger
+          heatingkey = "charger-config.enable-heating." & @"boxid" & "." & $charger
           pin = generate_pin(CHARGER)
           task = %*{"command": "config-charger", "charger": charger, "enable-charging": charging, "enable-heating": heating, "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
@@ -762,10 +780,13 @@
             discard redis_client.lpush(key = "tasks." & @"boxid", value = $task)
             discard redis_client.expire(key = tkey, seconds = 86400)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.del(@[chargingkey, heatingkey])
             discard redis_client.exec()
             okay = true
-          except:
+          except IOError:
             redis_client = redis.open()
+          except:
+            discard
           if okay:
             resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "config-charger", "boxid": @"boxid", "charger": charger, "enable-charging": charging, "enable-heating": heating}, "application/json"
           else:
