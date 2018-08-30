@@ -97,6 +97,7 @@
           skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
           tkey = "tasks." & @"boxid"
           ackkey = "lock-off-ack." & @"boxid" & "." & $pin
+          network = try: redis_client.get("network." & @"boxid") except: redisNil  # Todo: should be removed when all old box are retired
         check_pin(@"boxid", "lock-off", pin):
           var okay = false
           try:
@@ -107,10 +108,18 @@
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
             discard redis_client.exec()
             okay = true
-          except:
+          except IOError:
             redis_client = redis.open()
-          loop_check_cache(ackkey, cache_result):
-            if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
+          except:
+            discard
+          if network == "EC20":
+            loop_check_cache(ackkey, cache_result):
+              if cache_result != redisNil:
+                resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
+              else:
+                resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
+          else:
+            if okay:
               resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}, "application/json"
             else:
               resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": lock}), "application/json"
@@ -131,31 +140,45 @@
                    %*{"command": "locks-off", "board": board, "locks": locks, "expires-at": epochTime().toInt() + 10, "pin": pins[0], "pins": pins, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
           ackkey = if len(pins) == 1: "lock-off-ack." & @"boxid" & "." & $pins[0] else: "locks-off-ack." & @"boxid" & "." & $pins[0]
+          network = try: redis_client.get("network." & @"boxid") except: redisNil  # Todo: should be removed when all old box are retired
         check_pins(@"boxid", "locks-off", pins):
           var okay = false
           try:
             redis_client.multi()
             discard redis_client.lpush(key = "tasks." & @"boxid", value = $json)
             discard redis_client.expire(key = tkey, seconds = 86400)
+            var removedkeys: seq[string] = @[]
             for i in 0..len(locks) - 1:
               var
                 lock = locks[i]
                 skey = "lock-status." & @"boxid" & "." & $board & "." & $lock
-                dkey = "lock-detect." & @"boxid" & "." & $board & "." & $lock
-              discard redis_client.del(@[skey, dkey])
+              removedkeys.add(skey)
+            discard redis_client.del(removedkeys)
             discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $json)
             discard redis_client.exec()
             okay = true
           except:
             redis_client = redis.open()
           if len(pins) == 1:
-            loop_check_cache(ackkey, cache_result):
-              if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
+            if network == "EC20":
+              loop_check_cache(ackkey, cache_result):
+                if cache_result != redisNil:
+                  resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}, "application/json"
+                else:
+                  resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
+            else:
+              if okay:
                 resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}, "application/json"
               else:
                 resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "lock-off", "boxid": @"boxid", "board": board, "lock": locks[0]}), "application/json"
           else:
-            loop_check_cache(ackkey, cache_result):
+            if network == "EC20":
+              loop_check_cache(ackkey, cache_result):
+                if cache_result != redisNil:
+                  resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
+                else:
+                  resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到缓存服务器"), "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}), "application/json"
+            else:
               if okay: # Todo: should be replaced with 'cache_result != redisNil' when all old box are retired
                 resp Http200, $ %*{"code": 1, "msg": "OK", "cmd": "locks-off", "boxid": @"boxid", "board": board, "locks": locks}, "application/json"
               else:
