@@ -1436,9 +1436,9 @@ PIN 值标志是一个对立的 KEY，命名格式为:
 
 检查的策略如下：
 
-1. 如果前一秒在线，默认 box 是在线的。
+1. 如果前一分钟在线，默认 box 是在线的。
 
-2. 如果前一秒不在线，则连续三次检查现在是否在线，然后返回结果。
+2. 如果前一分钟不在线，则连续三次检查现在是否在线，然后返回结果。
 
 #+begin_src nim :noweb-ref check-online
   template check_online(boxid: string, actions: untyped): untyped =
