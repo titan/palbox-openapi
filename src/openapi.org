@@ -840,7 +840,7 @@ speaker 的编号与 card reader 的编号一致。
           speaker = parseInt(@"speaker")
           audio = parseInt(@"audio")
           pin = generate_lock_pin(speaker, audio, 0)
-          json = %* {"command": "play", "speaker": speaker, "audio": audio, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          json = %* {"command": "play", "qos": ">=1", "speaker": speaker, "audio": audio, "pin": pin, "expires-at": epochTime().toInt() + 10, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
           tkey = "tasks." & @"boxid"
         check_pin(@"boxid", "play", pin):
           var okay = false
@@ -1068,6 +1068,30 @@ speaker 的编号与 card reader 的编号一致。
 ** 开锁
 #+begin_src nim :noweb-ref egg-lock-off
   put "/@boxid/eggs/@eggid/@cabin/off":
+    check_signature(request, "egg-lock-off" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/" & @"cabin" & "/off"):
+      check_online(@"boxid"):
+        let
+          egg = parseInt(@"eggid")
+          cabin = parseInt(@"cabin")
+          pin = generate_lock_pin(egg, cabin, 0)
+          task = %*{"command": "egg-lock-off", "egg": egg, "cabin": cabin, "qos": ">=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
+          tkey = "tasks." & @"boxid"
+          ackkey = "egg-lock-off-ack." & @"boxid" & "." & $pin
+        check_pin(@"boxid", "egg-lock-off", pin):
+          try:
+            redis_client.multi()
+            discard redis_client.lpush(key = tkey, value = $task)
+            discard redis_client.expire(key = tkey, seconds = 86400)
+            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
+            discard redis_client.exec()
+          except:
+            redis_client = redis.open()
+          loop_check_cache(ackkey, cache_result):
+            if cache_result == redisNil:
+              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到扭蛋机"), "boxid": @"boxid", "cmd": "egg-lock-off", "egg": $egg, "cabin": $cabin}), "application/json"
+            else:
+              resp Http200, $ %*{"code": 1, "cmd": "egg-lock-off", "boxid": @"boxid", "egg": $egg, "cabin": $cabin}, "application/json"
+  post "/@boxid/eggs/@eggid/@cabin/off":
     check_signature(request, "egg-lock-off" & "/"  & @"boxid" & "/eggs/" & @"eggid" & "/" & @"cabin" & "/off"):
       check_online(@"boxid"):
         let
