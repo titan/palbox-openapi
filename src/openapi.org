@@ -1347,7 +1347,7 @@ speaker 的编号与 card reader 的编号一致。
             if cache_result == redisNil:
               resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到 RFID 读卡器"), "boxid": @"boxid", "cmd": "rfid-reader-data", "board": $board, "scope": scope, "offset": offset, "num": num}), "application/json"
             else:
-              let tags = redis_client.lrange("rfid-reader-data." & @"boxid" & "." & $board & "." & scope & "." & $offset & "." & $num, 0, -1)
+              let tags = redis_client.smembers("rfid-reader-data." & @"boxid" & "." & $board & "." & scope & "." & $offset & "." & $pin)
               resp Http200, $ %*{"code": 1, "cmd": "rfid-reader-data", "boxid": @"boxid", "board": $board, "scope": scope, "offset": offset, "num": num, "tags": tags}, "application/json"
 
 #+end_src
