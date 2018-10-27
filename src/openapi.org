@@ -64,7 +64,6 @@
     <<egg-query>>
     <<rfid-reader-inventory>>
     <<rfid-reader-difference>>
-    <<rfid-reader-data>>
 
   runforever()
 #+end_src
@@ -1318,37 +1317,6 @@ speaker 的编号与 card reader 的编号一致。
               resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到 RFID 读卡器"), "boxid": @"boxid", "cmd": "rfid-reader-difference", "board": $board, "door": $door}), "application/json"
             else:
               resp Http200, $ %*{"code": 1, "cmd": "rfid-reader-difference", "boxid": @"boxid", "board": $board, "door": $door}, "application/json"
-
-#+end_src
-** 数据
-#+begin_src nim :noweb-ref rfid-reader-data
-  get "/@boxid/rfid-readers/@board/@scope":
-    check_signature(request, "rfid-reader-data" & "/"  & @"boxid" & "/rfid-readers/" & @"board" & "/" & @"scope"):
-      check_online(@"boxid"):
-        let
-          board = parseInt(@"board")
-          scope = @"scope"
-          offset = parseInt(request.params["offset"])
-          num = parseInt(request.params["num"])
-          pin = generate_lock_pin(board, offset, 1)
-          task = %*{"command": "rfid-reader-data", "board": board, "scope": scope, "offset": offset, "num": num, "qos": ">=1", "expires-at": epochTime().toInt() + 10, "pin": pin, "status": "queued", "occurred-at": getDateStr() & " " & getClockStr()}
-          tkey = "tasks." & @"boxid"
-          ackkey = "rfid-reader-data-ack." & @"boxid" & "." & $pin
-        check_pin(@"boxid", "rfid-reader-data", pin):
-          try:
-            redis_client.multi()
-            discard redis_client.lpush(key = tkey, value = $task)
-            discard redis_client.expire(key = tkey, seconds = 86400)
-            discard redis_client.rpush(key = "tasklog." & @"boxid" & "." & getDateStr(), value = $task)
-            discard redis_client.exec()
-          except:
-            redis_client = redis.open()
-          loop_check_cache(ackkey, cache_result):
-            if cache_result == redisNil:
-              resp Http200, decode_url($ %*{"code": 500, "msg": encode_url("无法连接到 RFID 读卡器"), "boxid": @"boxid", "cmd": "rfid-reader-data", "board": $board, "scope": scope, "offset": offset, "num": num}), "application/json"
-            else:
-              let tags = redis_client.smembers("rfid-reader-data." & @"boxid" & "." & $board & "." & scope & "." & $offset & "." & $pin)
-              resp Http200, $ %*{"code": 1, "cmd": "rfid-reader-data", "boxid": @"boxid", "board": $board, "scope": scope, "offset": offset, "num": num, "tags": tags}, "application/json"
 
 #+end_src
 * MT19937
