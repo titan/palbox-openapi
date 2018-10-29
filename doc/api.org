@@ -1,3 +1,4 @@
+#+STARTUP: indent
 * 基本框架
 
 #+begin_src markdown :exports code :noweb yes :mkdirp yes :tangle /dev/shm/openapi/openapi.md
@@ -25,6 +26,8 @@
 <<egg-play>>
 <<egg-volume>>
 <<egg-gpio>>
+<<rfid-reader-inventory>>
+<<rfid-reader-difference>>
 
 #+end_src
 
@@ -786,6 +789,93 @@ DATE 是 HTTP Header 里的 Date 字段。
          Content-Type: application/json
 
          {"code":1,"cmd":"egg-gpio","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","egg":"1","gpio":"15"}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+** RFID阅读器
+*** 盘点
+  #+begin_src markdown :noweb-ref rfid-reader-inventory :noweb yes
+    ## RFID盘点 [/{boxid}/rfid-readers/{board}/{door}/inventory]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "rfid-reader-inventory" + "/" + boxid + "/rfid-readers/" + board + "/" + door + "/inventory" + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | board | int  | 1~8  |
+    | door  | int  | 1~5  |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/rfid-readers/1/1/inventory HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:79ec6049444e1a202cc770fca75ed361fb690eec
+        Date: Mon, 30 Jul 2018 02:12:11 +0000
+
+    ### 响应
+
+    #### 成功
+
+         HTTP/1.1 200 OK
+         Content-Length: 109
+         Content-Type: application/json
+
+         {"code":1,"cmd":"rfid-reader-inventory","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":"1","door":"1"}
+
+    #### 无法查询到充电器
+
+       HTTP/1.1 200 OK
+       Content-Length: 130
+       Content-Type: application/json
+
+       {"code":500,"msg":"无法连接到 RFID 读卡器","cmd":"rfid-reader-inventory","boxid":"31-FF-DB-05-48-54-34-39-31-61-18-43","board":1,"door":1}
+
+    <<signature-error>>
+    <<too-many-request-error>>
+    <<connect-cache-error>>
+    <<offline-error>>
+#+end_src
+*** 差集
+  #+begin_src markdown :noweb-ref rfid-reader-difference :noweb yes
+    ## RFID差集 [/{boxid}/rfid-readers/{board}/{door}/difference]
+
+    ### 签名计算
+
+        hmac-sha1(appkey, "rfid-reader-difference" + "/" + boxid + "/rfid-readers/" + board + "/" + door + "/difference" + date)
+
+    ### 请求
+
+    | 参数  | 类型 | 范围 |
+    | board | int  | 1~8  |
+    | door  | int  | 1~5  |
+
+        PUT /34-FF-D7-05-4D-42-37-39-31-90-07-43/rfid-readers/1/1/difference HTTP/1.1
+        Host: palbox.fengchaohuzhu.com
+        Content-Length: 0
+        Authorization: 4b71f4fd1dec2809940abe0c558d6fc6:79ec6049444e1a202cc770fca75ed361fb690eec
+        Date: Mon, 30 Jul 2018 02:12:11 +0000
+
+    ### 响应
+
+    #### 成功
+
+         HTTP/1.1 200 OK
+         Content-Length: 109
+         Content-Type: application/json
+
+         {"code":1,"cmd":"rfid-reader-difference","boxid":"34-FF-D7-05-4D-42-37-39-31-90-07-43","board":"1","door":"1"}
+
+    #### 无法查询到充电器
+
+       HTTP/1.1 200 OK
+       Content-Length: 130
+       Content-Type: application/json
+
+       {"code":500,"msg":"无法连接到 RFID 读卡器","cmd":"rfid-reader-difference","boxid":"31-FF-DB-05-48-54-34-39-31-61-18-43","board":1,"door":1}
 
     <<signature-error>>
     <<too-many-request-error>>
