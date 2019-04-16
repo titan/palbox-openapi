@@ -1464,25 +1464,20 @@ hmac(key, $CMD + $URLPATH + $PARAMETERS + $DATE )
             if hmac.to_hex(hmac_sha1(secret_tokens[appid], params & date)) == signature:
               actions
             else:
-              #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+              resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
               info params & date, " 请求无法通过签名检查 ", hmac.to_hex(hmac_sha1(secret_tokens[appid], params & date)), " ", signature
-              actions
           else:
-            #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+            resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
             info params & date, " 请求无法通过签名检查", " invalid app-key"
-            actions
         else:
-          #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+          resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
           info params & date, " 请求无法通过签名检查", " invalid authorization header"
-          actions
       else:
-        #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+        resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
         info params & date, " 请求无法通过签名检查", " no authorization header"
-        actions
     else:
-      #resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
+      resp Http200, decode_url($ %*{"code": 403, "msg": encode_url("无法通过签名检查")}), "application/json"
       info params, " 请求无法通过签名检查", " no date header"
-      actions
 #+end_src
 
 ** 检查 PIN 值
